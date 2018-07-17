@@ -29,24 +29,29 @@
 #  include <editline/readline.h>
 #endif
 
+extern "C" {
 #include <stdio.h>
 #include <string.h>
 #include <limits.h>
 #include <errno.h>
 
-#if defined (__linux__) || defined(__FreeBSD__)
+#if defined (__linux__) || defined(__FreeBSD__) || defined(__APPLE__)
 #  include <sys/resource.h>
 #  include <sys/types.h>
 #  include <unistd.h>
 #endif
 
-#ifdef __FreeBSD__
+#if defined (__FreeBSD__) || defined(__APPLE__)
 #  include <sys/sysctl.h>
 #  include <sys/user.h>
 #endif
 
+}
+
 #if !defined(_WIN32) || defined(__MINGW32__)
+extern "C" {
 #  include <unistd.h>
+}
 #else
 char *optarg;
 int optind = 1, optcur = 1;
@@ -193,6 +198,20 @@ int main(int argc, char **argv)
 	bool mode_v = false;
 	bool mode_q = false;
 
+#if ECLIPSE_GDB_ARG_BUG
+	char **oargv = argv;
+	char **nargv = (char **) calloc(argc + 1, sizeof(char *));
+	for (int i = 0; i < argc; i += 1) {
+		nargv[i] = strdup(argv[i]);
+		int l = strlen(nargv[i]);
+		if (nargv[i][0] == '\'' && nargv[i][l - 1] == '\'') {
+			nargv[i][l - 1] = '\0';
+			nargv[i] += 1;
+		}
+	}
+	argv = nargv;
+#endif
+	printf("Bang!\n");
 #if defined(YOSYS_ENABLE_READLINE) || defined(YOSYS_ENABLE_EDITLINE)
 	if (getenv("HOME") != NULL) {
 		yosys_history_file = stringf("%s/.yosys_history", getenv("HOME"));

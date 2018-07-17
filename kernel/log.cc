@@ -25,7 +25,7 @@
 #  include <sys/time.h>
 #endif
 
-#if defined(__linux__) || defined(__FreeBSD__)
+#if defined(__linux__) || defined(__FreeBSD__) || defined(__APPLE__)
 #  include <dlfcn.h>
 #endif
 
@@ -392,7 +392,7 @@ void log_pop()
 	log_flush();
 }
 
-#if (defined(__linux__) || defined(__FreeBSD__)) && defined(YOSYS_ENABLE_PLUGINS)
+#if (defined(__linux__) || defined(__FreeBSD__) || defined(__APPLE__)) && defined(YOSYS_ENABLE_PLUGINS)
 void log_backtrace(const char *prefix, int levels)
 {
 	if (levels <= 0) return;

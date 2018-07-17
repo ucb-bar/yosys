@@ -1,7 +1,7 @@
 // Note: Set ENABLE_LIBYOSYS=1 in Makefile or Makefile.conf to build libyosys.so
 // yosys-config --exec --cxx -o demomain --cxxflags --ldflags demomain.cc -lyosys -lstdc++
 
-#include <kernel/yosys.h>
+#include "kernel/yosys.h"
 
 int main()
 {

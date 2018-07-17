@@ -51,7 +51,7 @@
 #  include <glob.h>
 #endif
 
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__APPLE__)
 #  include <sys/sysctl.h>
 #endif
 
@@ -77,7 +77,7 @@ std::vector<void*> memhasher_store;
 
 void memhasher_on()
 {
-#if defined(__linux__) || defined(__FreeBSD__)
+#if defined(__linux__) || defined(__FreeBSD__) || defined(__APPLE__)
 	memhasher_rng += time(NULL) << 16 ^ getpid();
 #endif
 	memhasher_store.resize(0x10000);
