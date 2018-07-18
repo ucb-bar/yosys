@@ -28,9 +28,45 @@
 USING_YOSYS_NAMESPACE
 PRIVATE_NAMESPACE_BEGIN
 
+bool verbose, norename, noattr, attr2comment, noexpr, nodec, nohex, nostr, defparam, decimal;
 pool<string> used_names;
 dict<IdString, string> namecache;
 int autoid_counter;
+
+typedef unsigned FDirection;
+static const FDirection NODIRECTION = 0x0;
+static const FDirection IN = 0x1;
+static const FDirection OUT = 0x2;
+static const FDirection INOUT = 0x3;
+
+static const char * FDirectionToStr(const FDirection direction)
+{
+    switch(direction) {
+        case NODIRECTION: return "unknown";
+        case IN: return "input";
+        case OUT: return "output";
+        case INOUT: return "inout";
+        default: return "???";
+    }
+}
+
+FDirection getSignalFDirection(const SigSpec &sig)
+{
+    // Check if inside or outside module.
+    FDirection direction = NODIRECTION;
+    for (auto chunk : sig.chunks())
+    {
+        auto wire = chunk.wire;
+        if (wire && wire->port_id)
+        {
+            if (wire->port_input)
+                direction |= IN;
+            if (wire->port_output)
+                direction |= OUT;
+        }
+    }
+    return direction;
+}
 
 string next_id()
 {
@@ -78,6 +114,7 @@ struct FirrtlWorker
 	dict<SigBit, pair<string, int>> reverse_wire_map;
 	string unconn_id;
 
+
 	void register_reverse_wire_map(string id, SigSpec sig)
 	{
 		for (int i = 0; i < GetSize(sig); i++)
@@ -88,7 +125,7 @@ struct FirrtlWorker
 	{
 	}
 
-	string make_expr(SigSpec sig)
+	string make_expr(const SigSpec &sig)
 	{
 		string expr;
 
@@ -135,6 +172,110 @@ struct FirrtlWorker
 		return expr;
 	}
 
+	std::string fid(RTLIL::IdString internal_id)
+	{
+		const char *str = internal_id.c_str();
+		return *str == '\\' ? str + 1 : str;
+	}
+
+
+	std::string cellname(RTLIL::Cell *cell)
+	{
+		return fid(cell->name).c_str();
+	}
+
+	void process_instance(RTLIL::Cell *cell, vector<string> &wire_exprs)
+	{
+		std::string indent = "";
+		// TODO: Deal with cell attributes
+		if (!noattr && !cell->attributes.empty()) {
+
+		}
+		std::string cell_type = fid(cell->type);
+
+		// TODO: Deal with cell parameters
+		if (!defparam && cell->parameters.size() > 0) {
+
+		}
+
+		std::string cell_name = cellname(cell);
+		std::string cell_name_comment;
+		if (cell_name != fid(cell->name))
+			cell_name_comment = " /* " + fid(cell->name) + " */ ";
+		else
+			cell_name_comment = "";
+		wire_exprs.push_back(stringf("%s" "inst _%s%s of %s", indent.c_str(), cell_name.c_str(), cell_name_comment.c_str(), cell_type.c_str()));
+
+		std::set<RTLIL::IdString> numbered_ports;
+		for (int i = 1; true; i++) {
+			char str[16];
+			snprintf(str, 16, "$%d", i);
+			for (auto it = cell->connections().begin(); it != cell->connections().end(); ++it) {
+				if (it->first != str)
+					continue;
+				wire_exprs.push_back(stringf("\n%s  ", indent.c_str()));
+				wire_exprs.push_back(stringf("%s", make_expr(it->second).c_str()));
+				numbered_ports.insert(it->first);
+				std::cerr << "Found numbered port: " << str;
+				goto found_numbered_port;
+			}
+			break;
+		found_numbered_port:;
+		}
+		for (auto it = cell->connections().begin(); it != cell->connections().end(); ++it) {
+			if (numbered_ports.count(it->first))
+				continue;
+			if (it->second.size() > 0) {
+                const SigSpec &firstSig = cell->getPort(it->first);
+                const SigSpec &secondSig = it->second;
+                const std::string firstName = cell_name + "." + make_expr(firstSig);
+                const std::string secondName = make_expr(secondSig);
+                FDirection firstDir = getSignalFDirection(firstSig);
+                FDirection secondDir = getSignalFDirection(secondSig);
+                // Signals must have different directions unless they're both INOUT.
+                if (false && firstDir == secondDir && firstDir != INOUT) {
+                    log_error("Instance port %s.%s and connection %s both have the same direction (%s)!\n", log_id(cell->type), log_signal(firstSig), log_signal(secondSig), FDirectionToStr(firstDir));
+                }
+                std::string source, sink;
+                switch (firstDir) {
+                    case OUT:
+                        source = firstName;
+                        sink = secondName;
+                        break;
+                    case NODIRECTION:
+//                        log_error("Instance port %s.%s has no direction!\n", log_id(cell->type), log_signal(firstSig));
+//                        break;
+                        /* FALL_THROUGH */
+                    case IN:
+                        source = secondName;
+                        sink = firstName;
+                        break;
+                    case INOUT:
+                        switch(secondDir) {
+                            case IN:
+                                source = firstName;
+                                sink = secondName;
+                                break;
+                            case OUT:
+                                source = secondName;
+                                sink = firstName;
+                                break;
+                            default:
+                                log_error("Instance port %s.%s is INOUT but connection is %s\n", log_id(cell_type), log_signal(it->second), FDirectionToStr(secondDir));
+                                break;
+                        }
+                        break;
+                    default:
+                        log_error("Instance port %s.%s unrecognized direction 0x%x !\n", log_id(cell_type), log_signal(it->second), firstDir);
+                        break;
+                }
+				wire_exprs.push_back(stringf("\n%s  %s <= %s", indent.c_str(), sink.c_str(), source.c_str()));
+			}
+		}
+		wire_exprs.push_back(stringf("\n"));
+
+	}
+
 	void run()
 	{
 		f << stringf("  module %s:\n", make_id(module->name));
@@ -157,6 +298,11 @@ struct FirrtlWorker
 
 		for (auto cell : module->cells())
 		{
+			if (cell->type[0] != '$')
+			{
+				process_instance(cell, wire_exprs);
+				continue;
+			}
 			if (cell->type.in("$not", "$logic_not", "$neg", "$reduce_and", "$reduce_or", "$reduce_xor", "$reduce_bool", "$reduce_xnor"))
 			{
 				string y_id = make_id(cell->name);

@@ -19,7 +19,7 @@ ENABLE_PROTOBUF := 0
 
 # other configuration flags
 ENABLE_GPROF := 0
-ENABLE_DEBUG := 0
+ENABLE_DEBUG := 1
 ENABLE_NDEBUG := 0
 LINK_CURSES := 0
 LINK_TERMCAP := 0
@@ -107,7 +107,7 @@ OBJS = kernel/version_$(GIT_REV).o
 # is just a symlink to your actual ABC working directory, as 'make mrproper'
 # will remove the 'abc' directory and you do not want to accidentally
 # delete your work on ABC..
-ABCREV = 6df1396
+ABCREV = default
 ABCPULL = 1
 ABCURL ?= https://github.com/berkeley-abc/abc
 ABCMKARGS = CC="$(CXX)" CXX="$(CXX)" ABC_USE_LIBSTDCXX=1
