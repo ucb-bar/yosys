@@ -113,6 +113,7 @@ struct FirrtlWorker
 
 	dict<SigBit, pair<string, int>> reverse_wire_map;
 	string unconn_id;
+	std::string indent;
 
 
 	void register_reverse_wire_map(string id, SigSpec sig)
@@ -121,7 +122,7 @@ struct FirrtlWorker
 			reverse_wire_map[sig[i]] = make_pair(id, i);
 	}
 
-	FirrtlWorker(Module *module, std::ostream &f) : module(module), f(f)
+	FirrtlWorker(Module *module, std::ostream &f) : module(module), f(f), indent("    ")
 	{
 	}
 
@@ -186,7 +187,6 @@ struct FirrtlWorker
 
 	void process_instance(RTLIL::Cell *cell, vector<string> &wire_exprs)
 	{
-		std::string indent = "";
 		// TODO: Deal with cell attributes
 		if (!noattr && !cell->attributes.empty()) {
 
@@ -206,25 +206,7 @@ struct FirrtlWorker
 			cell_name_comment = "";
 		wire_exprs.push_back(stringf("%s" "inst _%s%s of %s", indent.c_str(), cell_name.c_str(), cell_name_comment.c_str(), cell_type.c_str()));
 
-		std::set<RTLIL::IdString> numbered_ports;
-		for (int i = 1; true; i++) {
-			char str[16];
-			snprintf(str, 16, "$%d", i);
-			for (auto it = cell->connections().begin(); it != cell->connections().end(); ++it) {
-				if (it->first != str)
-					continue;
-				wire_exprs.push_back(stringf("\n%s  ", indent.c_str()));
-				wire_exprs.push_back(stringf("%s", make_expr(it->second).c_str()));
-				numbered_ports.insert(it->first);
-				std::cerr << "Found numbered port: " << str;
-				goto found_numbered_port;
-			}
-			break;
-		found_numbered_port:;
-		}
 		for (auto it = cell->connections().begin(); it != cell->connections().end(); ++it) {
-			if (numbered_ports.count(it->first))
-				continue;
 			if (it->second.size() > 0) {
                 const SigSpec &firstSig = cell->getPort(it->first);
                 const SigSpec &secondSig = it->second;
@@ -269,7 +251,7 @@ struct FirrtlWorker
                         log_error("Instance port %s.%s unrecognized direction 0x%x !\n", log_id(cell_type), log_signal(it->second), firstDir);
                         break;
                 }
-				wire_exprs.push_back(stringf("\n%s  %s <= %s", indent.c_str(), sink.c_str(), source.c_str()));
+				wire_exprs.push_back(stringf("\n%s%s <= %s", indent.c_str(), sink.c_str(), source.c_str()));
 			}
 		}
 		wire_exprs.push_back(stringf("\n"));
