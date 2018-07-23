@@ -50,7 +50,7 @@ static const char * FDirectionToStr(const FDirection direction)
     }
 }
 
-FDirection getSignalFDirection(const SigSpec &sig)
+FDirection getSignalFDirection(const SigSpec &sig, Module *module)
 {
     // Check if inside or outside module.
     FDirection direction = NODIRECTION;
@@ -59,10 +59,12 @@ FDirection getSignalFDirection(const SigSpec &sig)
         auto wire = chunk.wire;
         if (wire && wire->port_id)
         {
+			// Are we inside the module?
+			bool inside = module == wire->module;
             if (wire->port_input)
-                direction |= IN;
+                direction |= inside ? IN : OUT;
             if (wire->port_output)
-                direction |= OUT;
+                direction |= inside ? OUT : IN;
         }
     }
     return direction;
@@ -212,10 +214,11 @@ struct FirrtlWorker
                 const SigSpec &secondSig = it->second;
                 const std::string firstName = cell_name + "." + make_expr(firstSig);
                 const std::string secondName = make_expr(secondSig);
-                FDirection firstDir = getSignalFDirection(firstSig);
-                FDirection secondDir = getSignalFDirection(secondSig);
-                // Signals must have different directions unless they're both INOUT.
-                if (false && firstDir == secondDir && firstDir != INOUT) {
+                FDirection firstDir = getSignalFDirection(firstSig, module);
+                FDirection secondDir = getSignalFDirection(secondSig, module);
+                // Signals must have different directions unless they're both INOUT or they're the same signal.
+				// The signals are the "same" when we're dealing with "positional association" (deprecated).
+                if (firstSig != secondSig && firstDir == secondDir && firstDir != INOUT) {
                     log_error("Instance port %s.%s and connection %s both have the same direction (%s)!\n", log_id(cell->type), log_signal(firstSig), log_signal(secondSig), FDirectionToStr(firstDir));
                 }
                 std::string source, sink;
