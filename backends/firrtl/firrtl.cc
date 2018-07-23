@@ -41,33 +41,36 @@ static const FDirection INOUT = 0x3;
 
 static const char * FDirectionToStr(const FDirection direction)
 {
-    switch(direction) {
-        case NODIRECTION: return "unknown";
-        case IN: return "input";
-        case OUT: return "output";
-        case INOUT: return "inout";
-        default: return "???";
-    }
+	switch(direction) {
+		case NODIRECTION: return "unknown";
+		case IN: return "input";
+		case OUT: return "output";
+		case INOUT: return "inout";
+		default: return "???";
+	}
 }
 
+// Get a signal direction with respect to a specific module.
+// If we're inside the module, the direction is as specified.
+// If we're outside the module, the direction is reversed.
 FDirection getSignalFDirection(const SigSpec &sig, Module *module)
 {
-    // Check if inside or outside module.
-    FDirection direction = NODIRECTION;
-    for (auto chunk : sig.chunks())
-    {
-        auto wire = chunk.wire;
-        if (wire && wire->port_id)
-        {
+	// Check if inside or outside module.
+	FDirection direction = NODIRECTION;
+	for (auto chunk : sig.chunks())
+	{
+		auto wire = chunk.wire;
+		if (wire && wire->port_id)
+		{
 			// Are we inside the module?
 			bool inside = module == wire->module;
-            if (wire->port_input)
-                direction |= inside ? IN : OUT;
-            if (wire->port_output)
-                direction |= inside ? OUT : IN;
-        }
-    }
-    return direction;
+			if (wire->port_input)
+				direction |= inside ? IN : OUT;
+			if (wire->port_output)
+				direction |= inside ? OUT : IN;
+		}
+	}
+	return direction;
 }
 
 string next_id()
@@ -210,50 +213,50 @@ struct FirrtlWorker
 
 		for (auto it = cell->connections().begin(); it != cell->connections().end(); ++it) {
 			if (it->second.size() > 0) {
-                const SigSpec &firstSig = cell->getPort(it->first);
-                const SigSpec &secondSig = it->second;
-                const std::string firstName = cell_name + "." + make_expr(firstSig);
-                const std::string secondName = make_expr(secondSig);
-                FDirection firstDir = getSignalFDirection(firstSig, module);
-                FDirection secondDir = getSignalFDirection(secondSig, module);
-                // Signals must have different directions unless they're both INOUT or they're the same signal.
+				const SigSpec &firstSig = cell->getPort(it->first);
+				const SigSpec &secondSig = it->second;
+				const std::string firstName = cell_name + "." + make_expr(firstSig);
+				const std::string secondName = make_expr(secondSig);
+				FDirection firstDir = getSignalFDirection(firstSig, module);
+				FDirection secondDir = getSignalFDirection(secondSig, module);
+				// Signals must have different directions unless they're both INOUT or they're the same signal.
 				// The signals are the "same" when we're dealing with "positional association" (deprecated).
-                if (firstSig != secondSig && firstDir == secondDir && firstDir != INOUT) {
-                    log_error("Instance port %s.%s and connection %s both have the same direction (%s)!\n", log_id(cell->type), log_signal(firstSig), log_signal(secondSig), FDirectionToStr(firstDir));
-                }
-                std::string source, sink;
-                switch (firstDir) {
-                    case OUT:
-                        source = firstName;
-                        sink = secondName;
-                        break;
-                    case NODIRECTION:
-//                        log_error("Instance port %s.%s has no direction!\n", log_id(cell->type), log_signal(firstSig));
-//                        break;
-                        /* FALL_THROUGH */
-                    case IN:
-                        source = secondName;
-                        sink = firstName;
-                        break;
-                    case INOUT:
-                        switch(secondDir) {
-                            case IN:
-                                source = firstName;
-                                sink = secondName;
-                                break;
-                            case OUT:
-                                source = secondName;
-                                sink = firstName;
-                                break;
-                            default:
-                                log_error("Instance port %s.%s is INOUT but connection is %s\n", log_id(cell_type), log_signal(it->second), FDirectionToStr(secondDir));
-                                break;
-                        }
-                        break;
-                    default:
-                        log_error("Instance port %s.%s unrecognized direction 0x%x !\n", log_id(cell_type), log_signal(it->second), firstDir);
-                        break;
-                }
+				if (firstSig != secondSig && firstDir == secondDir && firstDir != INOUT) {
+					log_error("Instance port %s.%s and connection %s both have the same direction (%s)!\n", log_id(cell->type), log_signal(firstSig), log_signal(secondSig), FDirectionToStr(firstDir));
+				}
+				std::string source, sink;
+				switch (firstDir) {
+					case OUT:
+						source = firstName;
+						sink = secondName;
+						break;
+					case NODIRECTION:
+						//                        log_error("Instance port %s.%s has no direction!\n", log_id(cell->type), log_signal(firstSig));
+						//                        break;
+						/* FALL_THROUGH */
+					case IN:
+						source = secondName;
+						sink = firstName;
+						break;
+					case INOUT:
+						switch(secondDir) {
+							case IN:
+								source = firstName;
+								sink = secondName;
+								break;
+							case OUT:
+								source = secondName;
+								sink = firstName;
+								break;
+							default:
+								log_error("Instance port %s.%s is INOUT but connection is %s\n", log_id(cell_type), log_signal(it->second), FDirectionToStr(secondDir));
+								break;
+						}
+						break;
+					default:
+						log_error("Instance port %s.%s unrecognized direction 0x%x !\n", log_id(cell_type), log_signal(it->second), firstDir);
+						break;
+				}
 				wire_exprs.push_back(stringf("\n%s%s <= %s", indent.c_str(), sink.c_str(), source.c_str()));
 			}
 		}
