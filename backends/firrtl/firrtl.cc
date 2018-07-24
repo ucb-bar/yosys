@@ -28,7 +28,7 @@
 USING_YOSYS_NAMESPACE
 PRIVATE_NAMESPACE_BEGIN
 
-bool verbose, norename, noattr, attr2comment, noexpr, nodec, nohex, nostr, defparam, decimal;
+bool defparam, noattr;
 pool<string> used_names;
 dict<IdString, string> namecache;
 int autoid_counter;
@@ -39,20 +39,7 @@ static const FDirection IN = 0x1;
 static const FDirection OUT = 0x2;
 static const FDirection INOUT = 0x3;
 
-static const char * FDirectionToStr(const FDirection direction)
-{
-	switch(direction) {
-		case NODIRECTION: return "unknown";
-		case IN: return "input";
-		case OUT: return "output";
-		case INOUT: return "inout";
-		default: return "???";
-	}
-}
-
-// Get a signal direction with respect to a specific module.
-// If we're inside the module, the direction is as specified.
-// If we're outside the module, the direction is reversed.
+// Get a port direction with respect to a specific module.
 FDirection getPortFDirection(IdString id, Module *module)
 {
 	Wire *wire = module->wires_.at(id);
@@ -63,29 +50,6 @@ FDirection getPortFDirection(IdString id, Module *module)
 			direction |= IN;
 		if (wire->port_output)
 			direction |= OUT;
-	}
-	return direction;
-}
-
-// Get a signal direction with respect to a specific module.
-// If we're inside the module, the direction is as specified.
-// If we're outside the module, the direction is reversed.
-FDirection getSignalFDirection(const SigSpec &sig, Module *module)
-{
-	// Check if inside or outside module.
-	FDirection direction = NODIRECTION;
-	for (auto chunk : sig.chunks())
-	{
-		auto wire = chunk.wire;
-		if (wire && wire->port_id)
-		{
-			// Are we inside the module?
-			bool inside = module == wire->module;
-			if (wire->port_input)
-				direction |= inside ? IN : OUT;
-			if (wire->port_output)
-				direction |= inside ? OUT : IN;
-		}
 	}
 	return direction;
 }
