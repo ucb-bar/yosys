@@ -53,6 +53,23 @@ static const char * FDirectionToStr(const FDirection direction)
 // Get a signal direction with respect to a specific module.
 // If we're inside the module, the direction is as specified.
 // If we're outside the module, the direction is reversed.
+FDirection getPortFDirection(IdString id, Module *module)
+{
+	Wire *wire = module->wires_.at(id);
+	FDirection direction = NODIRECTION;
+	if (wire && wire->port_id)
+	{
+		if (wire->port_input)
+			direction |= IN;
+		if (wire->port_output)
+			direction |= OUT;
+	}
+	return direction;
+}
+
+// Get a signal direction with respect to a specific module.
+// If we're inside the module, the direction is as specified.
+// If we're outside the module, the direction is reversed.
 FDirection getSignalFDirection(const SigSpec &sig, Module *module)
 {
 	// Check if inside or outside module.
@@ -118,8 +135,8 @@ struct FirrtlWorker
 
 	dict<SigBit, pair<string, int>> reverse_wire_map;
 	string unconn_id;
+	RTLIL::Design *design;
 	std::string indent;
-
 
 	void register_reverse_wire_map(string id, SigSpec sig)
 	{
@@ -127,7 +144,7 @@ struct FirrtlWorker
 			reverse_wire_map[sig[i]] = make_pair(id, i);
 	}
 
-	FirrtlWorker(Module *module, std::ostream &f) : module(module), f(f), indent("    ")
+	FirrtlWorker(Module *module, std::ostream &f, RTLIL::Design *theDesign) : module(module), f(f), design(theDesign), indent("    ")
 	{
 	}
 
@@ -209,23 +226,21 @@ struct FirrtlWorker
 			cell_name_comment = " /* " + fid(cell->name) + " */ ";
 		else
 			cell_name_comment = "";
-		wire_exprs.push_back(stringf("%s" "inst _%s%s of %s", indent.c_str(), cell_name.c_str(), cell_name_comment.c_str(), cell_type.c_str()));
+		// Find the module corresponding to this instance.
+		auto instModule = design->module(cell->type);
+		wire_exprs.push_back(stringf("%s" "inst %s%s of %s", indent.c_str(), cell_name.c_str(), cell_name_comment.c_str(), cell_type.c_str()));
 
 		for (auto it = cell->connections().begin(); it != cell->connections().end(); ++it) {
 			if (it->second.size() > 0) {
-				const SigSpec &firstSig = cell->getPort(it->first);
 				const SigSpec &secondSig = it->second;
-				const std::string firstName = cell_name + "." + make_expr(firstSig);
+				const std::string firstName = cell_name + "." + make_id(it->first);
 				const std::string secondName = make_expr(secondSig);
-				FDirection firstDir = getSignalFDirection(firstSig, module);
-				FDirection secondDir = getSignalFDirection(secondSig, module);
-				// Signals must have different directions unless they're both INOUT or they're the same signal.
-				// The signals are the "same" when we're dealing with "positional association" (deprecated).
-				if (firstSig != secondSig && firstDir == secondDir && firstDir != INOUT) {
-					log_error("Instance port %s.%s and connection %s both have the same direction (%s)!\n", log_id(cell->type), log_signal(firstSig), log_signal(secondSig), FDirectionToStr(firstDir));
-				}
+				// Find the direction for this port.
+				FDirection dir = getPortFDirection(it->first, instModule);
 				std::string source, sink;
-				switch (firstDir) {
+				switch (dir) {
+					case INOUT:
+						log_warning("Instance port connection %s.%s is INOUT; treating as OUT\n", log_id(cell_type), log_signal(it->second));
 					case OUT:
 						source = firstName;
 						sink = secondName;
@@ -238,23 +253,8 @@ struct FirrtlWorker
 						source = secondName;
 						sink = firstName;
 						break;
-					case INOUT:
-						switch(secondDir) {
-							case IN:
-								source = firstName;
-								sink = secondName;
-								break;
-							case OUT:
-								source = secondName;
-								sink = firstName;
-								break;
-							default:
-								log_error("Instance port %s.%s is INOUT but connection is %s\n", log_id(cell_type), log_signal(it->second), FDirectionToStr(secondDir));
-								break;
-						}
-						break;
 					default:
-						log_error("Instance port %s.%s unrecognized direction 0x%x !\n", log_id(cell_type), log_signal(it->second), firstDir);
+						log_error("Instance port %s.%s unrecognized connection direction 0x%x !\n", log_id(cell_type), log_signal(it->second), dir);
 						break;
 				}
 				wire_exprs.push_back(stringf("\n%s%s <= %s", indent.c_str(), sink.c_str(), source.c_str()));
@@ -704,7 +704,7 @@ struct FirrtlBackend : public Backend {
 
 		for (auto module : design->modules())
 		{
-			FirrtlWorker worker(module, *f);
+			FirrtlWorker worker(module, *f, design);
 			worker.run();
 		}
 
