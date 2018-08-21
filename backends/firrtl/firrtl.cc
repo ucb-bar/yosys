@@ -59,7 +59,7 @@ string next_id()
 	string new_id;
 
 	while (1) {
-		new_id = stringf("_%d", autoid_counter++);
+		new_id = stringf("_X_%d", autoid_counter++);
 		if (used_names.count(new_id) == 0) break;
 	}
 
@@ -83,6 +83,11 @@ const char *make_id(IdString id)
 		if ('_' == ch) continue;
 		ch = '_';
 	}
+	// FIXME: Ensure we have a non-digit after the '_'
+	if (new_id[0] == '_' && isdigit(new_id[1]))
+	{
+		new_id = "_X" + new_id;
+	}
 
 	while (used_names.count(new_id) != 0)
 		new_id += '_';
@@ -101,6 +106,8 @@ struct FirrtlWorker
 	string unconn_id;
 	RTLIL::Design *design;
 	std::string indent;
+	dict<IdString, Module *> moduleInstances;
+	dict<std::string, Wire *> generatedWires;
 
 	void register_reverse_wire_map(string id, SigSpec sig)
 	{
@@ -233,18 +240,64 @@ struct FirrtlWorker
 		f << stringf("  module %s:\n", make_id(module->name));
 		vector<string> port_decls, wire_decls, cell_exprs, wire_exprs;
 
+		// Find the clock for this module. We may need it for register definitions.
+		auto clockName = "clock";
+
+		// Find registers and instances of other modules for this module.
+		pool<SigBit> reg_bits;
+		for (auto cell : module->cells())
+		{
+			if (false && cell->type.in("$ff", "$dff", "$_FF_", "$_DFF_P_", "$_DFF_N_")) {
+				// not using sigmap -- we want the net directly at the dff output
+				for (auto bit : cell->getPort("\\Q"))
+					reg_bits.insert(bit);
+			}
+			else if (false && cell->type[0] != '$')		// Is this a module instance?
+			{
+				// Find the wires FIRRTL will automatically generate for this instance, so we can avoid emitting them.
+				Module *moduleInstance = design->module(cell->type);
+				moduleInstances[cell->name] = moduleInstance;
+				std::string cell_name = cellname(cell);
+				for (auto it = cell->connections().begin(); it != cell->connections().end(); ++it) {
+					if (it->second.size() > 0) {
+						const std::string wireName = cell_name + "_" + make_id(it->first);
+						generatedWires[wireName] = moduleInstance->wires_.at(it->first);
+					}
+				}
+			}
+		}
+
 		for (auto wire : module->wires())
 		{
+			const auto wireName = make_id(wire->name);
 			if (wire->port_id)
 			{
+//				if (strcmp(wireName, "clock") == 0)
+//					std::cerr << "Bang!";
 				if (wire->port_input && wire->port_output)
 					log_error("Module port %s.%s is inout!\n", log_id(module), log_id(wire));
 				port_decls.push_back(stringf("    %s %s: UInt<%d>\n", wire->port_input ? "input" : "output",
-						make_id(wire->name), wire->width));
+						wireName, wire->width));
 			}
 			else
 			{
-				wire_decls.push_back(stringf("    wire %s: UInt<%d>\n", make_id(wire->name), wire->width));
+				// Is this a module instance wire which we'll regenerate?
+				if (generatedWires.count(wireName) == 0) {
+					// Ignore yosys generated wires.
+//					if (wireName[0] == '_' && isdigit(wireName[1]))
+//						continue;
+//					std::cerr << wireName << std::endl;
+					bool is_register = false;
+					for (auto bit : SigSpec(wire))
+						if (reg_bits.count(bit))
+							is_register = true;
+	//				if (strcmp(wireName, "reg_b_s1") == 0)
+	//					std::cerr << "Bang!";
+					if (is_register)
+						wire_decls.push_back(stringf("    reg %s: UInt<%d>, asClock(%s)\n", wireName, wire->width, clockName));
+					else
+						wire_decls.push_back(stringf("    wire %s: UInt<%d>\n", wireName, wire->width));
+				}
 			}
 		}
 
@@ -267,7 +320,13 @@ struct FirrtlWorker
 					a_expr = "asSInt(" + a_expr + ")";
 				}
 
-				a_expr = stringf("pad(%s, %d)", a_expr.c_str(), y_width);
+				if (y_id == "_ne_RocketCore_v_1758_17") {
+					std::cerr << "Bang!";
+				}
+				// Don't use the results of logical operations (a single bit) to control padding
+				if (!cell->type.in("$eq", "$eqx", "$gt", "$ge", "$lt", "$le", "$ne", "$nex", "$reduce_bool", "$logic_not") && y_width == 1 ) {
+					a_expr = stringf("pad(%s, %d)", a_expr.c_str(), y_width);
+				}
 
 				string primop;
                                 bool always_uint = false;
@@ -285,9 +344,12 @@ struct FirrtlWorker
                                         a_expr = stringf("xorr(%s)", a_expr.c_str());
                                 }
 				if (cell->type == "$reduce_bool") {
-                                        primop = "neq";
-                                        a_expr = stringf("%s, UInt(0)", a_expr.c_str());
-                                }
+					primop = "neq";
+					// Use the sign of the a_expr and its width as the type (UInt/SInt) and width of the comparand.
+					bool a_signed = cell->parameters.at("\\A_SIGNED").as_bool();
+					int a_width =  cell->parameters.at("\\A_WIDTH").as_int();
+					a_expr = stringf("%s, %cInt<%d>(0)", a_expr.c_str(), a_signed ? 'S' : 'U', a_width);
+				}
 
 				string expr = stringf("%s(%s)", primop.c_str(), a_expr.c_str());
 
@@ -313,15 +375,15 @@ struct FirrtlWorker
 				if (cell->parameters.at("\\A_SIGNED").as_bool()) {
 					a_expr = "asSInt(" + a_expr + ")";
 				}
-				if (cell->parameters.at("\\A_SIGNED").as_bool()  & (cell->type != "$shr")) {
-					b_expr = "asSInt(" + b_expr + ")";
+				// Shift amount is always unsigned, and needn't be padded to result width.
+				if (!cell->type.in("$shr", "$sshr", "$shl", "$sshl")) {
+					if (cell->parameters.at("\\B_SIGNED").as_bool()) {
+						b_expr = "asSInt(" + b_expr + ")";
+					}
+					b_expr = stringf("pad(%s, %d)", b_expr.c_str(), y_width);
 				}
 
 				a_expr = stringf("pad(%s, %d)", a_expr.c_str(), y_width);
-
-				if ((cell->type != "$shl") && (cell->type != "$sshl")) {
-				        b_expr = stringf("pad(%s, %d)", b_expr.c_str(), y_width);
-                                }
 
 				if (cell->parameters.at("\\A_SIGNED").as_bool()  & (cell->type == "$shr")) {
 					a_expr = "asUInt(" + a_expr + ")";
@@ -537,6 +599,13 @@ struct FirrtlWorker
 			if (wire->port_input)
 				continue;
 
+			const auto wireName = make_id(wire->name);
+			// Ignore assignments to generated wires. FIRRTL will re-generate the assignment.
+			if (generatedWires.count(wireName) != 0)
+				continue;
+//			// Ignore yosys generated wires.
+//			if (wireName[0] == '_' && isdigit(wireName[1]))
+//				continue;
 			int cursor = 0;
 			bool is_valid = false;
 			bool make_unconn_id = false;
@@ -592,14 +661,14 @@ struct FirrtlWorker
 			if (is_valid) {
 				if (make_unconn_id) {
 					wire_decls.push_back(stringf("    wire %s: UInt<1>\n", unconn_id.c_str()));
-					cell_exprs.push_back(stringf("    %s is invalid\n", unconn_id.c_str()));
+					wire_decls.push_back(stringf("    %s is invalid\n", unconn_id.c_str()));
 				}
 				wire_exprs.push_back(stringf("    %s <= %s\n", make_id(wire->name), expr.c_str()));
 			} else {
 				if (make_unconn_id) {
 					unconn_id.clear();
 				}
-				wire_exprs.push_back(stringf("    %s is invalid\n", make_id(wire->name)));
+				wire_decls.push_back(stringf("    %s is invalid\n", make_id(wire->name)));
 			}
 		}
 
