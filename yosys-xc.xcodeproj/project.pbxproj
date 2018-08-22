@@ -9146,15 +9146,13 @@
 					"YOSYS_ENABLE_ABC=1",
 					"YOSYS_ENABLE_TCL=1",
 					"YOSYS_ENABLE_PLUGIN=1",
-					"YOSYS_ENABLE_READLINE=1",
 					ABC_USE_STDINT_H,
-					"ABC_USE_READLINE=1",
 					"ABC_USE_PTHREADS=1",
 					"ABC_USE_CUDD=1",
 					_YOSYS_,
 				);
 				GIT_REV = 8b92ddb9;
-				HEADER_SEARCH_PATHS = /opt/local/include;
+				HEADER_SEARCH_PATHS = "";
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)/abc/lib/x64",
@@ -9184,15 +9182,13 @@
 					"YOSYS_ENABLE_ABC=1",
 					"YOSYS_ENABLE_TCL=1",
 					"YOSYS_ENABLE_PLUGIN=1",
-					"YOSYS_ENABLE_READLINE=1",
 					ABC_USE_STDINT_H,
-					"ABC_USE_READLINE=1",
 					"ABC_USE_PTHREADS=1",
 					"ABC_USE_CUDD=1",
 					_YOSYS_,
 				);
 				GIT_REV = 8b92ddb9;
-				HEADER_SEARCH_PATHS = /opt/local/include;
+				HEADER_SEARCH_PATHS = "";
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)/abc/lib/x64",

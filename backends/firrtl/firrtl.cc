@@ -320,11 +320,11 @@ struct FirrtlWorker
 					a_expr = "asSInt(" + a_expr + ")";
 				}
 
-				if (y_id == "_ne_RocketCore_v_1758_17") {
+				if (y_id == "_not_RoundRawFNToRecFN_v_351_93") {
 					std::cerr << "Bang!";
 				}
 				// Don't use the results of logical operations (a single bit) to control padding
-				if (!cell->type.in("$eq", "$eqx", "$gt", "$ge", "$lt", "$le", "$ne", "$nex", "$reduce_bool", "$logic_not") && y_width == 1 ) {
+				if (!(cell->type.in("$eq", "$eqx", "$gt", "$ge", "$lt", "$le", "$ne", "$nex", "$reduce_bool", "$logic_not") && y_width == 1) ) {
 					a_expr = stringf("pad(%s, %d)", a_expr.c_str(), y_width);
 				}
 
