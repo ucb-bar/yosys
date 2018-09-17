@@ -180,16 +180,7 @@ struct FirrtlWorker
 
 	void process_instance(RTLIL::Cell *cell, vector<string> &wire_exprs)
 	{
-		// TODO: Deal with cell attributes
-		if (!noattr && !cell->attributes.empty()) {
-
-		}
 		std::string cell_type = fid(cell->type);
-
-		// TODO: Deal with cell parameters
-		if (!defparam && cell->parameters.size() > 0) {
-
-		}
 
 		std::string cell_name = cellname(cell);
 		std::string cell_name_comment;
@@ -217,8 +208,7 @@ struct FirrtlWorker
 						sink = secondName;
 						break;
 					case NODIRECTION:
-						//                        log_error("Instance port %s.%s has no direction!\n", log_id(cell->type), log_signal(firstSig));
-						//                        break;
+						log_warning("Instance port connection %s.%s is NODIRECTION; treating as IN\n", log_id(cell_type), log_signal(it->second));
 						/* FALL_THROUGH */
 					case IN:
 						source = secondName;
@@ -303,6 +293,7 @@ struct FirrtlWorker
 
 		for (auto cell : module->cells())
 		{
+		  // Is this cell is a module instance?
 			if (cell->type[0] != '$')
 			{
 				process_instance(cell, wire_exprs);
@@ -320,9 +311,6 @@ struct FirrtlWorker
 					a_expr = "asSInt(" + a_expr + ")";
 				}
 
-				if (y_id == "_not_RoundRawFNToRecFN_v_351_93") {
-					std::cerr << "Bang!";
-				}
 				// Don't use the results of logical operations (a single bit) to control padding
 				if (!(cell->type.in("$eq", "$eqx", "$gt", "$ge", "$lt", "$le", "$ne", "$nex", "$reduce_bool", "$logic_not") && y_width == 1) ) {
 					a_expr = stringf("pad(%s, %d)", a_expr.c_str(), y_width);
@@ -694,7 +682,7 @@ struct FirrtlWorker
 
 struct FirrtlBackend : public Backend {
 	FirrtlBackend() : Backend("firrtl", "write design to a FIRRTL file") { }
-	virtual void help()
+	void help() YS_OVERRIDE
 	{
 		//   |---v---|---v---|---v---|---v---|---v---|---v---|---v---|---v---|---v---|---v---|
 		log("\n");
@@ -703,7 +691,7 @@ struct FirrtlBackend : public Backend {
 		log("Write a FIRRTL netlist of the current design.\n");
 		log("\n");
 	}
-	virtual void execute(std::ostream *&f, std::string filename, std::vector<std::string> args, RTLIL::Design *design)
+	void execute(std::ostream *&f, std::string filename, std::vector<std::string> args, RTLIL::Design *design) YS_OVERRIDE
 	{
 		size_t argidx;
 		for (argidx = 1; argidx < args.size(); argidx++)

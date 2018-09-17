@@ -42,7 +42,7 @@
 #include "kernel/log.h"
 #include "frontends/verilog/verilog_frontend.h"
 #include "frontends/ast/ast.h"
-#include "verilog_parser.tab.h"
+#include "verilog_parser.tab.hh"
 
 USING_YOSYS_NAMESPACE
 using namespace AST;
@@ -192,7 +192,7 @@ YOSYS_NAMESPACE_END
 "const"      { if (formal_mode) return TOK_CONST; SV_KEYWORD(TOK_CONST); }
 "checker"    { if (formal_mode) return TOK_CHECKER; SV_KEYWORD(TOK_CHECKER); }
 "endchecker" { if (formal_mode) return TOK_ENDCHECKER; SV_KEYWORD(TOK_ENDCHECKER); }
-"logic"      { SV_KEYWORD(TOK_REG); }
+"logic"      { SV_KEYWORD(TOK_LOGIC); }
 "bit"        { SV_KEYWORD(TOK_REG); }
 
 "eventually"   { if (formal_mode) return TOK_EVENTUALLY; SV_KEYWORD(TOK_EVENTUALLY); }
