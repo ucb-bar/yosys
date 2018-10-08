@@ -190,6 +190,16 @@ struct FirrtlWorker
 			cell_name_comment = "";
 		// Find the module corresponding to this instance.
 		auto instModule = design->module(cell->type);
+		// If there is no instance for this, just return.
+		if (instModule == NULL)
+		{
+			log_warning("No instance for %s.%s\n", cell_type.c_str(), cell_name.c_str());
+			for (auto p = cell->parameters.begin(); p != cell->parameters.end(); ++p) {
+				printf("%s\n", p->first.c_str());
+			}
+			instModule = design->module(cell->name);
+			return;
+		}
 		wire_exprs.push_back(stringf("%s" "inst %s%s of %s", indent.c_str(), cell_name.c_str(), cell_name_comment.c_str(), cell_type.c_str()));
 
 		for (auto it = cell->connections().begin(); it != cell->connections().end(); ++it) {
@@ -202,20 +212,20 @@ struct FirrtlWorker
 				std::string source, sink;
 				switch (dir) {
 					case INOUT:
-						log_warning("Instance port connection %s.%s is INOUT; treating as OUT\n", log_id(cell_type), log_signal(it->second));
+						log_warning("Instance port connection %s.%s is INOUT; treating as OUT\n", cell_type.c_str(), log_signal(it->second));
 					case OUT:
 						source = firstName;
 						sink = secondName;
 						break;
 					case NODIRECTION:
-						log_warning("Instance port connection %s.%s is NODIRECTION; treating as IN\n", log_id(cell_type), log_signal(it->second));
+						log_warning("Instance port connection %s.%s is NODIRECTION; treating as IN\n", cell_type.c_str(), log_signal(it->second));
 						/* FALL_THROUGH */
 					case IN:
 						source = secondName;
 						sink = firstName;
 						break;
 					default:
-						log_error("Instance port %s.%s unrecognized connection direction 0x%x !\n", log_id(cell_type), log_signal(it->second), dir);
+						log_error("Instance port %s.%s unrecognized connection direction 0x%x !\n", cell_type.c_str(), log_signal(it->second), dir);
 						break;
 				}
 				wire_exprs.push_back(stringf("\n%s%s <= %s", indent.c_str(), sink.c_str(), source.c_str()));
@@ -547,6 +557,38 @@ struct FirrtlWorker
 				continue;
 			}
 
+			if (cell->type.in("$memwr", "$memrd"))
+			{
+				//				cell->parameters["\\MEMID"] = memory->name.str();
+				//				cell->parameters["\\CLK_ENABLE"] = false;
+				//				cell->parameters["\\CLK_POLARITY"] = true;
+				//				cell->parameters["\\PRIORITY"] = 0;
+				//				cell->parameters["\\ABITS"] = GetSize(addr);
+				//				cell->parameters["\\WIDTH"] = GetSize(data);
+				//				cell->setPort("\\EN", RTLIL::SigSpec(net_map_at(inst->GetControl())).repeat(GetSize(data)));
+				//				cell->setPort("\\CLK", RTLIL::State::S0);
+				//				cell->setPort("\\ADDR", addr);
+				//				cell->setPort("\\DATA", data);
+				//
+				//				if (inst->Type() == OPER_CLOCKED_WRITE_PORT) {
+				//					cell->parameters["\\CLK_ENABLE"] = true;
+				//					cell->setPort("\\CLK", net_map_at(inst->GetClock()));
+				//				}
+				std::string cell_type = fid(cell->type);
+				string mem_id = make_id(cell->name);
+				printf("%s: %s\n", cell_type.c_str(), mem_id.c_str());
+				for (auto p = cell->parameters.begin(); p != cell->parameters.end(); ++p) {
+					printf("%s=%d\n", p->first.c_str(), p->second.as_int());
+				}
+				int abits = cell->parameters.at("\\ABITS").as_int();
+				int width = cell->parameters.at("\\WIDTH").as_int();
+
+				Const clk_enable = cell->parameters.at("\\CLK_ENABLE");
+				Const clk_polarity = cell->parameters.at("\\CLK_POLARITY");
+
+				continue;
+			}
+
 			if (cell->type.in("$dff"))
 			{
 				bool clkpol = cell->parameters.at("\\CLK_POLARITY").as_bool();
@@ -566,7 +608,25 @@ struct FirrtlWorker
 				continue;
 			}
 
-			log_error("Cell type not supported: %s (%s.%s)\n", log_id(cell->type), log_id(module), log_id(cell));
+			// This may be a parameterized module - paramod.
+			if (cell->type.substr(0, 8) == "$paramod")
+			{
+				auto paramod_module = log_id(module);
+				auto paramod_instance = log_id(cell);
+				printf("paramod: %s.%s\n", paramod_module, paramod_instance);
+				process_instance(cell, wire_exprs);
+				continue;
+			}
+			else
+			{
+				log_warning("Cell type not supported: %s (%s.%s)\n", log_id(cell->type), log_id(module), log_id(cell));
+				string mem_id = make_id(cell->name);
+				for (auto p = cell->parameters.begin(); p != cell->parameters.end(); ++p) {
+					printf("%s\n", p->first.c_str());
+				}
+
+				continue;
+			}
 		}
 
 		for (auto conn : module->connections())

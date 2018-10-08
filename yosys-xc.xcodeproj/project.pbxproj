@@ -1318,6 +1318,9 @@
 		072655A820F6867F006A5587 /* libreadline.7.0.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 072655A520F6867F006A5587 /* libreadline.7.0.dylib */; };
 		072655A920F6867F006A5587 /* libtcl8.6.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 072655A620F6867F006A5587 /* libtcl8.6.dylib */; };
 		075BD0EA20F817BB008C3557 /* version_8b92ddb9.cc in Sources */ = {isa = PBXBuildFile; fileRef = 075BD0E920F817BB008C3557 /* version_8b92ddb9.cc */; };
+		077273CE215074E200DD4A0E /* extraUtilPath.c in Sources */ = {isa = PBXBuildFile; fileRef = 077273CD215074E100DD4A0E /* extraUtilPath.c */; };
+		077273D02150754500DD4A0E /* dauCount.c in Sources */ = {isa = PBXBuildFile; fileRef = 077273CF2150754500DD4A0E /* dauCount.c */; };
+		077273D22150759000DD4A0E /* extraUtilMaj.c in Sources */ = {isa = PBXBuildFile; fileRef = 077273D12150758F00DD4A0E /* extraUtilMaj.c */; };
 		07BD9D3320F6C9B000E2E3B1 /* cloud.c in Sources */ = {isa = PBXBuildFile; fileRef = 07263B2920F68266006A5587 /* cloud.c */; };
 		07BD9D7220F71CCB00E2E3B1 /* satInter.c in Sources */ = {isa = PBXBuildFile; fileRef = 07BD9D4D20F71CCA00E2E3B1 /* satInter.c */; };
 		07BD9D7420F71CCB00E2E3B1 /* satInterA.c in Sources */ = {isa = PBXBuildFile; fileRef = 07BD9D4F20F71CCA00E2E3B1 /* satInterA.c */; };
@@ -1353,9 +1356,9 @@
 			isEditable = 1;
 			outputFiles = (
 				"$(DERIVED_FILE_DIR)/$(INPUT_FILE_BASE).tab.cc",
-				"$(DERIVED_FILE_DIR)/$(INPUT_FILE_BASE).tab.h",
+				"$(DERIVED_FILE_DIR)/$(INPUT_FILE_BASE).tab.hh",
 			);
-			script = "# $(YACC)\n/opt/local/bin/bison -d -r all -o $DERIVED_FILE_DIR/$INPUT_FILE_BASE.tab.cc $INPUT_FILE_DIR/$INPUT_FILE_NAME\nmv $DERIVED_FILE_DIR/$INPUT_FILE_BASE.tab.hh $DERIVED_FILE_DIR/$INPUT_FILE_BASE.tab.h";
+			script = "# $(YACC)\n/opt/local/bin/bison -d -r all -o $DERIVED_FILE_DIR/$INPUT_FILE_BASE.tab.cc $INPUT_FILE_DIR/$INPUT_FILE_NAME\n#mv $DERIVED_FILE_DIR/$INPUT_FILE_BASE.tab.hh $DERIVED_FILE_DIR/$INPUT_FILE_BASE.tab.h";
 		};
 		07BD9D4720F70C1E00E2E3B1 /* PBXBuildRule */ = {
 			isa = PBXBuildRule;
@@ -3633,6 +3636,9 @@
 		072655A520F6867F006A5587 /* libreadline.7.0.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libreadline.7.0.dylib; path = ../../../../../../../../opt/local/lib/libreadline.7.0.dylib; sourceTree = "<group>"; };
 		072655A620F6867F006A5587 /* libtcl8.6.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libtcl8.6.dylib; path = ../../../../../../../../opt/local/lib/libtcl8.6.dylib; sourceTree = "<group>"; };
 		075BD0E920F817BB008C3557 /* version_8b92ddb9.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = version_8b92ddb9.cc; path = "../../../../../../../../../../Users/jrl/Library/Developer/Xcode/DerivedData/yosys-xc-cgopwczfcfflqbdhmmuvpudjuvyk/Build/Products/Debug/kernel/version_8b92ddb9.cc"; sourceTree = "<group>"; };
+		077273CD215074E100DD4A0E /* extraUtilPath.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = extraUtilPath.c; sourceTree = "<group>"; };
+		077273CF2150754500DD4A0E /* dauCount.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = dauCount.c; sourceTree = "<group>"; };
+		077273D12150758F00DD4A0E /* extraUtilMaj.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = extraUtilMaj.c; sourceTree = "<group>"; };
 		07BD9D4920F71CCA00E2E3B1 /* license */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = license; sourceTree = "<group>"; };
 		07BD9D4A20F71CCA00E2E3B1 /* module.make */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = module.make; sourceTree = "<group>"; };
 		07BD9D4B20F71CCA00E2E3B1 /* satChecker.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = satChecker.c; sourceTree = "<group>"; };
@@ -5778,6 +5784,8 @@
 		07263D3D20F68266006A5587 /* extra */ = {
 			isa = PBXGroup;
 			children = (
+				077273D12150758F00DD4A0E /* extraUtilMaj.c */,
+				077273CD215074E100DD4A0E /* extraUtilPath.c */,
 				07263D3E20F68266006A5587 /* extra.h */,
 				07263D3F20F68266006A5587 /* extraUtilBitMatrix.c */,
 				07263D4220F68266006A5587 /* extraUtilCanon.c */,
@@ -6093,6 +6101,7 @@
 		07263EBD20F68266006A5587 /* dau */ = {
 			isa = PBXGroup;
 			children = (
+				077273CF2150754500DD4A0E /* dauCount.c */,
 				07263EBE20F68266006A5587 /* dau.c */,
 				07263EBF20F68266006A5587 /* dau.h */,
 				07263EC020F68266006A5587 /* dauArray.c */,
@@ -8071,6 +8080,7 @@
 				0726519720F68274006A5587 /* rwrEva.c in Sources */,
 				0726558620F6827B006A5587 /* Makefile in Sources */,
 				07264A3920F6826D006A5587 /* abcFx.c in Sources */,
+				077273D22150759000DD4A0E /* extraUtilMaj.c in Sources */,
 				0726552320F6827A006A5587 /* opt.cc in Sources */,
 				0726540B20F68278006A5587 /* bmcFault.c in Sources */,
 				0726496720F6826C006A5587 /* saigInd.c in Sources */,
@@ -8737,6 +8747,7 @@
 				0726519020F68274006A5587 /* retLvalue.c in Sources */,
 				07264A9420F6826D006A5587 /* abcReconv.c in Sources */,
 				072647C120F6826C006A5587 /* aigTruth.c in Sources */,
+				077273D02150754500DD4A0E /* dauCount.c in Sources */,
 				07264E7720F68270006A5587 /* ifLibLut.c in Sources */,
 				0726476320F6826C006A5587 /* synth_ice40.cc in Sources */,
 				07264CC120F6826F006A5587 /* cuddPriority.c in Sources */,
@@ -8845,6 +8856,7 @@
 				072653BD20F68278006A5587 /* sswRarity.c in Sources */,
 				0726481620F6826C006A5587 /* giaEquiv.c in Sources */,
 				072654B720F6827A006A5587 /* msatSolverSearch.c in Sources */,
+				077273CE215074E200DD4A0E /* extraUtilPath.c in Sources */,
 				0726522520F68275006A5587 /* absOldRef.c in Sources */,
 				072651A620F68275006A5587 /* rwrTemp.c in Sources */,
 				07264BBA20F6826E006A5587 /* ioWriteGml.c in Sources */,
