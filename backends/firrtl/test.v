@@ -31,7 +31,7 @@ module test(
         assign lt = a < b;
         assign geq = a >= b;
         assign leq = a <= b;
-        assign eqx = a === b;
+        assign eqx = a == b;
         assign shr = a >> b; //0111111111000000
         assign sshr = a >>> b;
         assign shl = a << b;

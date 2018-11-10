@@ -985,7 +985,8 @@ RTLIL::SigSpec AstNode::genRTLIL(int width_hint, bool sign_hint)
 
 		use_const_chunk:
 			if (children.size() != 0) {
-				log_assert(children[0]->type == AST_RANGE);
+				if (children[0]->type != AST_RANGE)
+					log_file_error(filename, linenum, "Single range expected.\n");
 				int source_width = id2ast->range_left - id2ast->range_right + 1;
 				int source_offset = id2ast->range_right;
 				if (!children[0]->range_valid) {
@@ -1199,7 +1200,8 @@ RTLIL::SigSpec AstNode::genRTLIL(int width_hint, bool sign_hint)
 		}
 
 	// generate cells for binary operations: $add, $sub, $mul, $div, $mod
-	if (0) { case AST_ADD: type_name = "$add"; }
+	if (0) {
+		case AST_ADD: type_name = "$add"; }
 	if (0) { case AST_SUB: type_name = "$sub"; }
 	if (0) { case AST_MUL: type_name = "$mul"; }
 	if (0) { case AST_DIV: type_name = "$div"; }

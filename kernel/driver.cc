@@ -211,7 +211,6 @@ int main(int argc, char **argv)
 	}
 	argv = nargv;
 #endif
-	printf("Bang!\n");
 #if defined(YOSYS_ENABLE_READLINE) || defined(YOSYS_ENABLE_EDITLINE)
 	if (getenv("HOME") != NULL) {
 		yosys_history_file = stringf("%s/.yosys_history", getenv("HOME"));
@@ -460,6 +459,8 @@ int main(int argc, char **argv)
 	if (log_errfile == NULL) {
 		log_files.push_back(stdout);
 		log_error_stderr = true;
+	} else if (log_files.empty()) {
+		log_files.push_back(log_errfile);
 	}
 
 	if (print_banner)

@@ -58,7 +58,8 @@ namespace VERILOG_FRONTEND {
 	bool do_not_require_port_stubs;
 	bool default_nettype_wire;
 	bool sv_mode, formal_mode, lib_mode;
-	bool norestrict_mode, assume_asserts_mode;
+	bool noassert_mode, noassume_mode, norestrict_mode;
+	bool assume_asserts_mode, assert_assumes_mode;
 	bool current_wire_rand, current_wire_const;
 	std::istream *lexin;
 }
@@ -881,9 +882,15 @@ param_decl_list:
 
 single_param_decl:
 	TOK_ID '=' expr {
-		if (astbuf1 == nullptr)
-			frontend_verilog_yyerror("syntax error");
-		AstNode *node = astbuf1->clone();
+		AstNode *node;
+		if (astbuf1 == nullptr) {
+			if (!sv_mode)
+				frontend_verilog_yyerror("syntax error");
+			node = new AstNode(AST_PARAMETER);
+			node->children.push_back(AstNode::mkconst_int(0, true));
+		} else {
+			node = astbuf1->clone();
+		}
 		node->str = *$1;
 		delete node->children[0];
 		node->children[0] = $3;
@@ -1275,16 +1282,28 @@ opt_stmt_label:
 
 assert:
 	opt_stmt_label TOK_ASSERT opt_property '(' expr ')' ';' {
-		ast_stack.back()->children.push_back(new AstNode(assume_asserts_mode ? AST_ASSUME : AST_ASSERT, $5));
+		if (noassert_mode)
+			delete $5;
+		else
+			ast_stack.back()->children.push_back(new AstNode(assume_asserts_mode ? AST_ASSUME : AST_ASSERT, $5));
 	} |
 	opt_stmt_label TOK_ASSUME opt_property '(' expr ')' ';' {
-		ast_stack.back()->children.push_back(new AstNode(AST_ASSUME, $5));
+		if (noassume_mode)
+			delete $5;
+		else
+			ast_stack.back()->children.push_back(new AstNode(assert_assumes_mode ? AST_ASSERT : AST_ASSUME, $5));
 	} |
 	opt_stmt_label TOK_ASSERT opt_property '(' TOK_EVENTUALLY expr ')' ';' {
-		ast_stack.back()->children.push_back(new AstNode(assume_asserts_mode ? AST_FAIR : AST_LIVE, $6));
+		if (noassert_mode)
+			delete $6;
+		else
+			ast_stack.back()->children.push_back(new AstNode(assume_asserts_mode ? AST_FAIR : AST_LIVE, $6));
 	} |
 	opt_stmt_label TOK_ASSUME opt_property '(' TOK_EVENTUALLY expr ')' ';' {
-		ast_stack.back()->children.push_back(new AstNode(AST_FAIR, $6));
+		if (noassume_mode)
+			delete $6;
+		else
+			ast_stack.back()->children.push_back(new AstNode(assert_assumes_mode ? AST_LIVE : AST_FAIR, $6));
 	} |
 	opt_stmt_label TOK_COVER opt_property '(' expr ')' ';' {
 		ast_stack.back()->children.push_back(new AstNode(AST_COVER, $5));
