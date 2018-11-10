@@ -23,7 +23,11 @@
 #include "kernel/celltypes.h"
 #include "kernel/cellaigs.h"
 #include "kernel/log.h"
+#include <algorithm>
 #include <string>
+#include <regex>
+#include <vector>
+#include <cmath>
 
 USING_YOSYS_NAMESPACE
 PRIVATE_NAMESPACE_BEGIN
@@ -34,22 +38,23 @@ dict<IdString, string> namecache;
 int autoid_counter;
 
 typedef unsigned FDirection;
-static const FDirection NODIRECTION = 0x0;
-static const FDirection IN = 0x1;
-static const FDirection OUT = 0x2;
-static const FDirection INOUT = 0x3;
+static const FDirection FD_NODIRECTION = 0x0;
+static const FDirection FD_IN = 0x1;
+static const FDirection FD_OUT = 0x2;
+static const FDirection FD_INOUT = 0x3;
+static const int FIRRTL_MAX_DSH_WIDTH = 20;
 
 // Get a port direction with respect to a specific module.
 FDirection getPortFDirection(IdString id, Module *module)
 {
 	Wire *wire = module->wires_.at(id);
-	FDirection direction = NODIRECTION;
+	FDirection direction = FD_NODIRECTION;
 	if (wire && wire->port_id)
 	{
 		if (wire->port_input)
-			direction |= IN;
+			direction |= FD_IN;
 		if (wire->port_output)
-			direction |= OUT;
+			direction |= FD_OUT;
 	}
 	return direction;
 }
@@ -97,6 +102,23 @@ const char *make_id(IdString id)
 	return namecache.at(id).c_str();
 }
 
+static std::vector<string> Tokenize( const string str, const std::regex regex )
+{
+	using namespace std;
+
+	std::vector<string> result;
+
+	sregex_token_iterator it( str.begin(), str.end(), regex, -1 );
+	sregex_token_iterator reg_end;
+
+	for ( ; it != reg_end; ++it ) {
+		if ( !it->str().empty() ) //token could be empty:check
+			result.emplace_back( it->str() );
+	}
+
+	return result;
+}
+
 struct FirrtlWorker
 {
 	Module *module;
@@ -109,6 +131,13 @@ struct FirrtlWorker
 	dict<IdString, Module *> moduleInstances;
 	dict<std::string, Wire *> generatedWires;
 
+	void printParams(Cell * cell) {
+		printf("%s: ", cell->type.c_str());
+		for (auto p = cell->parameters.begin(); p != cell->parameters.end(); ++p) {
+			printf("%s=%d\n", p->first.c_str(), p->second.as_int());
+		}
+	}
+
 	void register_reverse_wire_map(string id, SigSpec sig)
 	{
 		for (int i = 0; i < GetSize(sig); i++)
@@ -119,7 +148,7 @@ struct FirrtlWorker
 	{
 	}
 
-	string make_expr(const SigSpec &sig)
+	std::string make_expr(const SigSpec &sig, bool isSigned = false)
 	{
 		string expr;
 
@@ -130,22 +159,46 @@ struct FirrtlWorker
 			if (chunk.wire == nullptr)
 			{
 				std::vector<RTLIL::State> bits = chunk.data;
-				new_expr = stringf("UInt<%d>(\"h", GetSize(bits));
+				auto bitSize = GetSize(bits);
+				bool negative = isSigned && bits[bitSize - 1] == State::S1;
+				auto fill = isSigned ? bits[bitSize - 1] : State::S0;
+				const auto valueDelimiter = negative ? "" : "\"";
 
-				while (GetSize(bits) % 4 != 0)
-					bits.push_back(State::S0);
-
-				for (int i = GetSize(bits)-4; i >= 0; i -= 4)
+				// Check for yosys single bit signed and expand it to the minimum FIRRTL sized width.
+				if (isSigned && bitSize == 1)
 				{
-					int val = 0;
-					if (bits[i+0] == State::S1) val += 1;
-					if (bits[i+1] == State::S1) val += 2;
-					if (bits[i+2] == State::S1) val += 4;
-					if (bits[i+3] == State::S1) val += 8;
-					new_expr.push_back(val < 10 ? '0' + val : 'a' + val - 10);
+					bits.push_back(fill);
+					bitSize = GetSize(bits);
 				}
 
-				new_expr += "\")";
+				// Generate the correct bits for a negative representation.
+				if (negative)
+				{
+					int carry = 1;
+					for (int i = 0; i < bitSize; i += 1)
+					{
+						int b = bits[i] == State::S1 ? 0 : 1;
+						b += carry;
+						bits[i] = b & 1 ? State::S1 : State::S0;
+						carry = b >> 1;
+					}
+				}
+				new_expr = stringf("%cInt<%d>(%s%s", (isSigned) ? 'S' : 'U', bitSize, valueDelimiter, negative ? "-" : "h");
+
+				int val = 0;
+				for (int i = bitSize; i > 0; i -= 1)
+				{
+					int pos = i - 1;
+					int shift = pos % 4;
+					val |= (bits[pos] == State::S1 ? 1 : 0) << shift;
+					if (shift == 0)
+					{
+						new_expr.push_back(val < 10 ? '0' + val : 'a' + val - 10);
+						val = 0;
+					}
+				}
+
+				new_expr += stringf("%s)", valueDelimiter);
 			}
 			else if (chunk.offset == 0 && chunk.width == chunk.wire->width)
 			{
@@ -181,6 +234,39 @@ struct FirrtlWorker
 	void process_instance(RTLIL::Cell *cell, vector<string> &wire_exprs)
 	{
 		std::string cell_type = fid(cell->type);
+		std::string instanceOf;
+		// If this is a parameterized module, its parent module is encoded in the cell type
+		if (cell->type.substr(0, 8) == "$paramod")
+		{
+			if (true)
+			{
+				std::string::iterator it;
+				for (it = cell_type.begin(); it < cell_type.end(); it++)
+				{
+					switch (*it) {
+						case '\\': /* FALL_THROUGH */
+						case '$': instanceOf.append("_"); break;
+						default: instanceOf.append(1, *it); break;
+					}
+				}
+//				std::replace(instanceOf.begin(), instanceOf.end(), '$', '_');
+			}
+			else
+			{
+				std::regex re( "[\\]", std::regex::extended );
+				std::vector<string> modParams = Tokenize(cell_type, re);
+				if (modParams.size() < 2)
+				{
+					log_error("Cannot determine parent module for %s\n", cell_type.c_str());
+					return;
+				}
+				instanceOf = modParams[1];
+			}
+		}
+		else
+		{
+			instanceOf = cell_type;
+		}
 
 		std::string cell_name = cellname(cell);
 		std::string cell_name_comment;
@@ -200,7 +286,7 @@ struct FirrtlWorker
 			instModule = design->module(cell->name);
 			return;
 		}
-		wire_exprs.push_back(stringf("%s" "inst %s%s of %s", indent.c_str(), cell_name.c_str(), cell_name_comment.c_str(), cell_type.c_str()));
+		wire_exprs.push_back(stringf("%s" "inst %s%s of %s", indent.c_str(), cell_name.c_str(), cell_name_comment.c_str(), instanceOf.c_str()));
 
 		for (auto it = cell->connections().begin(); it != cell->connections().end(); ++it) {
 			if (it->second.size() > 0) {
@@ -211,16 +297,16 @@ struct FirrtlWorker
 				FDirection dir = getPortFDirection(it->first, instModule);
 				std::string source, sink;
 				switch (dir) {
-					case INOUT:
+					case FD_INOUT:
 						log_warning("Instance port connection %s.%s is INOUT; treating as OUT\n", cell_type.c_str(), log_signal(it->second));
-					case OUT:
+					case FD_OUT:
 						source = firstName;
 						sink = secondName;
 						break;
-					case NODIRECTION:
+					case FD_NODIRECTION:
 						log_warning("Instance port connection %s.%s is NODIRECTION; treating as IN\n", cell_type.c_str(), log_signal(it->second));
 						/* FALL_THROUGH */
-					case IN:
+					case FD_IN:
 						source = secondName;
 						sink = firstName;
 						break;
@@ -272,8 +358,6 @@ struct FirrtlWorker
 			const auto wireName = make_id(wire->name);
 			if (wire->port_id)
 			{
-//				if (strcmp(wireName, "clock") == 0)
-//					std::cerr << "Bang!";
 				if (wire->port_input && wire->port_output)
 					log_error("Module port %s.%s is inout!\n", log_id(module), log_id(wire));
 				port_decls.push_back(stringf("    %s %s: UInt<%d>\n", wire->port_input ? "input" : "output",
@@ -291,8 +375,6 @@ struct FirrtlWorker
 					for (auto bit : SigSpec(wire))
 						if (reg_bits.count(bit))
 							is_register = true;
-	//				if (strcmp(wireName, "reg_b_s1") == 0)
-	//					std::cerr << "Bang!";
 					if (is_register)
 						wire_decls.push_back(stringf("    reg %s: UInt<%d>, asClock(%s)\n", wireName, wire->width, clockName));
 					else
@@ -314,7 +396,7 @@ struct FirrtlWorker
 				string y_id = make_id(cell->name);
 				bool is_signed = cell->parameters.at("\\A_SIGNED").as_bool();
 				int y_width =  cell->parameters.at("\\Y_WIDTH").as_int();
-				string a_expr = make_expr(cell->getPort("\\A"));
+				string a_expr = make_expr(cell->getPort("\\A"), is_signed);
 				wire_decls.push_back(stringf("    wire %s: UInt<%d>\n", y_id.c_str(), y_width));
 
 				if (cell->parameters.at("\\A_SIGNED").as_bool()) {
@@ -366,8 +448,10 @@ struct FirrtlWorker
 				string y_id = make_id(cell->name);
 				bool is_signed = cell->parameters.at("\\A_SIGNED").as_bool();
 				int y_width =  cell->parameters.at("\\Y_WIDTH").as_int();
-				string a_expr = make_expr(cell->getPort("\\A"));
-				string b_expr = make_expr(cell->getPort("\\B"));
+				string a_expr = make_expr(cell->getPort("\\A"), is_signed);
+				int a_padded_width = cell->parameters.at("\\A_WIDTH").as_int();
+				string b_expr = make_expr(cell->getPort("\\B"), cell->parameters.at("\\B_SIGNED").as_bool());
+				int b_padded_width = cell->parameters.at("\\B_WIDTH").as_int();
 				wire_decls.push_back(stringf("    wire %s: UInt<%d>\n", y_id.c_str(), y_width));
 
 				if (cell->parameters.at("\\A_SIGNED").as_bool()) {
@@ -378,10 +462,31 @@ struct FirrtlWorker
 					if (cell->parameters.at("\\B_SIGNED").as_bool()) {
 						b_expr = "asSInt(" + b_expr + ")";
 					}
-					b_expr = stringf("pad(%s, %d)", b_expr.c_str(), y_width);
+					printParams(cell);
+					if (b_padded_width < y_width) {
+						auto b_sig = cell->getPort("\\B");
+						if (b_sig.is_fully_const()) {
+							std::regex uint_re( "Int<\\d+>");
+							string uint_width = stringf("Int<%d>", y_width);
+							b_expr = std::regex_replace(b_expr, uint_re, uint_width);
+						} else {
+							b_expr = stringf("pad(%s, %d)", b_expr.c_str(), y_width);
+						}
+						b_padded_width = y_width;
+					}
 				}
 
-				a_expr = stringf("pad(%s, %d)", a_expr.c_str(), y_width);
+				auto a_sig = cell->getPort("\\A");
+				if (a_padded_width < y_width) {
+					if (a_sig.is_fully_const()) {
+						std::regex uint_re( "Int<\\d+>");
+						string uint_width = stringf("Int<%d>", y_width);
+						a_expr = std::regex_replace(a_expr, uint_re, uint_width);
+					} else {
+						a_expr = stringf("pad(%s, %d)", a_expr.c_str(), y_width);
+					}
+					a_padded_width = y_width;
+				}
 
 				if (cell->parameters.at("\\A_SIGNED").as_bool()  & (cell->type == "$shr")) {
 					a_expr = "asUInt(" + a_expr + ")";
@@ -389,7 +494,10 @@ struct FirrtlWorker
 
 				string primop;
                                 bool always_uint = false;
-				if (cell->type == "$add") primop = "add";
+				if (cell->type == "$add") {
+					printParams(cell);
+					primop = "add";
+				}
 				if (cell->type == "$sub") primop = "sub";
 				if (cell->type == "$mul") primop = "mul";
 				if (cell->type == "$div") primop = "div";
@@ -430,8 +538,27 @@ struct FirrtlWorker
                                         primop = "leq";
                                         always_uint = true;
                                 }
-				if ((cell->type == "$shl") | (cell->type == "$sshl")) primop = "dshl";
-				if ((cell->type == "$shr") | (cell->type == "$sshr")) primop = "dshr";
+				if ((cell->type == "$shl") | (cell->type == "$sshl")) {
+					printParams(cell);
+					primop = "dshl";
+					// Determine the maximum width of the shift argument in bits.
+					int max_shift_width_bits = min(min(a_padded_width, b_padded_width), FIRRTL_MAX_DSH_WIDTH);
+					if (true) {
+						string max_shift_string = stringf("UInt<%d>(%d)", ceil_log2(max_shift_width_bits) + 1, max_shift_width_bits);
+						// Deal with the difference in semantics between FIRRTL and verilog
+						b_expr = stringf("mux(gt(%s, %s), %s, bits(%s, %d, 0))", b_expr.c_str(), max_shift_string.c_str(), max_shift_string.c_str(), b_expr.c_str(), max_shift_width_bits - 1);
+					}
+				}
+				if ((cell->type == "$shr") | (cell->type == "$sshr")) {
+					primop = "dshr";
+					// Determine the maximum width of the shift argument in bits.
+					int max_shift_width_bits = min(min(a_padded_width, b_padded_width), FIRRTL_MAX_DSH_WIDTH);
+					if (true) {
+						string max_shift_string = stringf("UInt<%d>(%d)", ceil_log2(max_shift_width_bits) + 1, max_shift_width_bits);
+						// Deal with the difference in semantics between FIRRTL and verilog
+						b_expr = stringf("mux(gt(%s, %s), %s, bits(%s, %d, 0))", b_expr.c_str(), max_shift_string.c_str(), max_shift_string.c_str(), b_expr.c_str(), max_shift_width_bits - 1);
+					}
+				}
 				if ((cell->type == "$logic_and")) {
                                         primop = "and";
                                         a_expr = "neq(" + a_expr + ", UInt(0))";
@@ -580,8 +707,6 @@ struct FirrtlWorker
 				for (auto p = cell->parameters.begin(); p != cell->parameters.end(); ++p) {
 					printf("%s=%d\n", p->first.c_str(), p->second.as_int());
 				}
-				int abits = cell->parameters.at("\\ABITS").as_int();
-				int width = cell->parameters.at("\\WIDTH").as_int();
 
 				Const clk_enable = cell->parameters.at("\\CLK_ENABLE");
 				Const clk_polarity = cell->parameters.at("\\CLK_POLARITY");
