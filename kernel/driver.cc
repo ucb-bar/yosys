@@ -198,8 +198,7 @@ int main(int argc, char **argv)
 	bool mode_v = false;
 	bool mode_q = false;
 
-#if ECLIPSE_GDB_ARG_BUG
-	char **oargv = argv;
+#if defined(ECLIPSE_GDB_ARG_BUG)
 	char **nargv = (char **) calloc(argc + 1, sizeof(char *));
 	for (int i = 0; i < argc; i += 1) {
 		nargv[i] = strdup(argv[i]);

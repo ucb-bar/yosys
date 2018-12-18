@@ -42,7 +42,7 @@ static const FDirection FD_NODIRECTION = 0x0;
 static const FDirection FD_IN = 0x1;
 static const FDirection FD_OUT = 0x2;
 static const FDirection FD_INOUT = 0x3;
-static const int FIRRTL_MAX_DSH_WIDTH = 20;
+static const int FIRRTL_MAX_DSH_WIDTH_ERROR = 20; // For historic reasons, this is actually one greater than the maximum allowed shift width
 
 // Get a port direction with respect to a specific module.
 FDirection getPortFDirection(IdString id, Module *module)
@@ -158,47 +158,69 @@ struct FirrtlWorker
 
 			if (chunk.wire == nullptr)
 			{
-				std::vector<RTLIL::State> bits = chunk.data;
-				auto bitSize = GetSize(bits);
-				bool negative = isSigned && bits[bitSize - 1] == State::S1;
-				auto fill = isSigned ? bits[bitSize - 1] : State::S0;
-				const auto valueDelimiter = negative ? "" : "\"";
+				if (true) {
+					std::vector<RTLIL::State> bits = chunk.data;
+					auto bitSize = GetSize(bits);
+					bool negative = isSigned && bits[bitSize - 1] == State::S1;
+					new_expr = stringf("UInt<%d>(\"h", GetSize(bits));
 
-				// Check for yosys single bit signed and expand it to the minimum FIRRTL sized width.
-				if (isSigned && bitSize == 1)
-				{
-					bits.push_back(fill);
-					bitSize = GetSize(bits);
-				}
+					while (GetSize(bits) % 4 != 0)
+						bits.push_back(State::S0);
 
-				// Generate the correct bits for a negative representation.
-				if (negative)
-				{
-					int carry = 1;
-					for (int i = 0; i < bitSize; i += 1)
+					for (int i = GetSize(bits)-4; i >= 0; i -= 4)
 					{
-						int b = bits[i] == State::S1 ? 0 : 1;
-						b += carry;
-						bits[i] = b & 1 ? State::S1 : State::S0;
-						carry = b >> 1;
-					}
-				}
-				new_expr = stringf("%cInt<%d>(%s%s", (isSigned) ? 'S' : 'U', bitSize, valueDelimiter, negative ? "-" : "h");
-
-				int val = 0;
-				for (int i = bitSize; i > 0; i -= 1)
-				{
-					int pos = i - 1;
-					int shift = pos % 4;
-					val |= (bits[pos] == State::S1 ? 1 : 0) << shift;
-					if (shift == 0)
-					{
+						int val = 0;
+						if (bits[i+0] == State::S1) val += 1;
+						if (bits[i+1] == State::S1) val += 2;
+						if (bits[i+2] == State::S1) val += 4;
+						if (bits[i+3] == State::S1) val += 8;
 						new_expr.push_back(val < 10 ? '0' + val : 'a' + val - 10);
-						val = 0;
 					}
-				}
 
-				new_expr += stringf("%s)", valueDelimiter);
+					new_expr += "\")";
+				} else {
+					std::vector<RTLIL::State> bits = chunk.data;
+					auto bitSize = GetSize(bits);
+					bool negative = isSigned && bits[bitSize - 1] == State::S1;
+					auto fill = isSigned ? bits[bitSize - 1] : State::S0;
+					const auto valueDelimiter = negative ? "" : "\"";
+
+					// Check for yosys single bit signed and expand it to the minimum FIRRTL sized width.
+					if (isSigned && bitSize == 1)
+					{
+						bits.push_back(fill);
+						bitSize = GetSize(bits);
+					}
+
+					// Generate the correct bits for a negative representation.
+					if (negative)
+					{
+						int carry = 1;
+						for (int i = 0; i < bitSize; i += 1)
+						{
+							int b = bits[i] == State::S1 ? 0 : 1;
+							b += carry;
+							bits[i] = b & 1 ? State::S1 : State::S0;
+							carry = b >> 1;
+						}
+					}
+					new_expr = stringf("%cInt<%d>(%s%s", (isSigned) ? 'S' : 'U', bitSize, valueDelimiter, negative ? "-" : "h");
+
+					int val = 0;
+					for (int i = bitSize; i > 0; i -= 1)
+					{
+						int pos = i - 1;
+						int shift = pos % 4;
+						val |= (bits[pos] == State::S1 ? 1 : 0) << shift;
+						if (shift == 0)
+						{
+							new_expr.push_back(val < 10 ? '0' + val : 'a' + val - 10);
+							val = 0;
+						}
+					}
+
+					new_expr += stringf("%s)", valueDelimiter);
+				}
 			}
 			else if (chunk.offset == 0 && chunk.width == chunk.wire->width)
 			{
@@ -465,7 +487,7 @@ struct FirrtlWorker
 					printParams(cell);
 					if (b_padded_width < y_width) {
 						auto b_sig = cell->getPort("\\B");
-						if (b_sig.is_fully_const()) {
+						if (false && b_sig.is_fully_const()) {
 							std::regex uint_re( "Int<\\d+>");
 							string uint_width = stringf("Int<%d>", y_width);
 							b_expr = std::regex_replace(b_expr, uint_re, uint_width);
@@ -477,7 +499,7 @@ struct FirrtlWorker
 				}
 
 				auto a_sig = cell->getPort("\\A");
-				if (a_padded_width < y_width) {
+				if (false && a_padded_width < y_width) {
 					if (a_sig.is_fully_const()) {
 						std::regex uint_re( "Int<\\d+>");
 						string uint_width = stringf("Int<%d>", y_width);
@@ -540,23 +562,41 @@ struct FirrtlWorker
                                 }
 				if ((cell->type == "$shl") | (cell->type == "$sshl")) {
 					printParams(cell);
-					primop = "dshl";
-					// Determine the maximum width of the shift argument in bits.
-					int max_shift_width_bits = min(min(a_padded_width, b_padded_width), FIRRTL_MAX_DSH_WIDTH);
-					if (true) {
-						string max_shift_string = stringf("UInt<%d>(%d)", ceil_log2(max_shift_width_bits) + 1, max_shift_width_bits);
-						// Deal with the difference in semantics between FIRRTL and verilog
-						b_expr = stringf("mux(gt(%s, %s), %s, bits(%s, %d, 0))", b_expr.c_str(), max_shift_string.c_str(), max_shift_string.c_str(), b_expr.c_str(), max_shift_width_bits - 1);
+					// Is the shift amount constant?
+					auto b_sig = cell->getPort("\\B");
+					if (b_sig.is_fully_const()) {
+						primop = "shl";
+						y_width += b_padded_width;
+					} else {
+						primop = "dshl";
+						// Determine the maximum width of the shift argument in bits.
+						if (b_padded_width >= FIRRTL_MAX_DSH_WIDTH_ERROR) {
+							int max_shift_width_bits = FIRRTL_MAX_DSH_WIDTH_ERROR - 1;
+							if (true) {
+								string max_shift_string = stringf("UInt<%d>(%d)", max_shift_width_bits, (1<<max_shift_width_bits) - 1);
+								// Deal with the difference in semantics between FIRRTL and verilog
+								b_expr = stringf("mux(gt(%s, %s), %s, bits(%s, %d, 0))", b_expr.c_str(), max_shift_string.c_str(), max_shift_string.c_str(), b_expr.c_str(), max_shift_width_bits - 1);
+							}
+//							y_width += max_shift_width_bits
+						}
 					}
 				}
 				if ((cell->type == "$shr") | (cell->type == "$sshr")) {
-					primop = "dshr";
-					// Determine the maximum width of the shift argument in bits.
-					int max_shift_width_bits = min(min(a_padded_width, b_padded_width), FIRRTL_MAX_DSH_WIDTH);
-					if (true) {
-						string max_shift_string = stringf("UInt<%d>(%d)", ceil_log2(max_shift_width_bits) + 1, max_shift_width_bits);
-						// Deal with the difference in semantics between FIRRTL and verilog
-						b_expr = stringf("mux(gt(%s, %s), %s, bits(%s, %d, 0))", b_expr.c_str(), max_shift_string.c_str(), max_shift_string.c_str(), b_expr.c_str(), max_shift_width_bits - 1);
+					// Is the shift amount constant?
+					auto b_sig = cell->getPort("\\B");
+					if (b_sig.is_fully_const()) {
+						primop = "shr";
+					} else {
+						primop = "dshr";
+						// Determine the maximum width of the shift argument in bits.
+						if (b_padded_width >= FIRRTL_MAX_DSH_WIDTH_ERROR) {
+							int max_shift_width_bits = FIRRTL_MAX_DSH_WIDTH_ERROR - 1;
+							if (true) {
+								string max_shift_string = stringf("UInt<%d>(%d)", max_shift_width_bits, (1<<max_shift_width_bits) - 1);
+								// Deal with the difference in semantics between FIRRTL and verilog
+								b_expr = stringf("mux(gt(%s, %s), %s, bits(%s, %d, 0))", b_expr.c_str(), max_shift_string.c_str(), max_shift_string.c_str(), b_expr.c_str(), max_shift_width_bits - 1);
+							}
+						}
 					}
 				}
 				if ((cell->type == "$logic_and")) {
