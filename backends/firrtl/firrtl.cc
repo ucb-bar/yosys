@@ -407,7 +407,8 @@ struct FirrtlWorker
 
 		for (auto cell : module->cells())
 		{
-		  // Is this cell is a module instance?
+			bool extract_y_bits = false;		// Assume no extraction of final bits will be required.
+		    // Is this cell is a module instance?
 			if (cell->type[0] != '$')
 			{
 				process_instance(cell, wire_exprs);
@@ -562,11 +563,11 @@ struct FirrtlWorker
                                 }
 				if ((cell->type == "$shl") | (cell->type == "$sshl")) {
 					printParams(cell);
+					extract_y_bits = true;
 					// Is the shift amount constant?
 					auto b_sig = cell->getPort("\\B");
 					if (b_sig.is_fully_const()) {
 						primop = "shl";
-						y_width += b_padded_width;
 					} else {
 						primop = "dshl";
 						// Determine the maximum width of the shift argument in bits.
@@ -577,7 +578,6 @@ struct FirrtlWorker
 								// Deal with the difference in semantics between FIRRTL and verilog
 								b_expr = stringf("mux(gt(%s, %s), %s, bits(%s, %d, 0))", b_expr.c_str(), max_shift_string.c_str(), max_shift_string.c_str(), b_expr.c_str(), max_shift_width_bits - 1);
 							}
-//							y_width += max_shift_width_bits
 						}
 					}
 				}
@@ -617,6 +617,11 @@ struct FirrtlWorker
 				}
 
 				string expr = stringf("%s(%s, %s)", primop.c_str(), a_expr.c_str(), b_expr.c_str());
+
+				// Deal with FIRRTL's "shift widens" semantics
+				if (extract_y_bits) {
+					expr = stringf("bits(%s, %d, 0)", expr.c_str(), y_width - 1);
+				}
 
 				if ((is_signed && !always_uint) || cell->type.in("$sub"))
 					expr = stringf("asUInt(%s)", expr.c_str());
