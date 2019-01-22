@@ -32,7 +32,6 @@
 USING_YOSYS_NAMESPACE
 PRIVATE_NAMESPACE_BEGIN
 
-bool defparam, noattr;
 pool<string> used_names;
 dict<IdString, string> namecache;
 int autoid_counter;
@@ -64,7 +63,7 @@ string next_id()
 	string new_id;
 
 	while (1) {
-		new_id = stringf("_X_%d", autoid_counter++);
+		new_id = stringf("_%d", autoid_counter++);
 		if (used_names.count(new_id) == 0) break;
 	}
 
@@ -87,11 +86,6 @@ const char *make_id(IdString id)
 		if ('0' <= ch && ch <= '9' && i != 0) continue;
 		if ('_' == ch) continue;
 		ch = '_';
-	}
-	// FIXME: Ensure we have a non-digit after the '_'
-	if (new_id[0] == '_' && isdigit(new_id[1]))
-	{
-		new_id = "_X" + new_id;
 	}
 
 	while (used_names.count(new_id) != 0)
@@ -128,15 +122,6 @@ struct FirrtlWorker
 	string unconn_id;
 	RTLIL::Design *design;
 	std::string indent;
-	dict<IdString, Module *> moduleInstances;
-	dict<std::string, Wire *> generatedWires;
-
-	void printParams(Cell * cell) {
-		printf("%s: ", cell->type.c_str());
-		for (auto p = cell->parameters.begin(); p != cell->parameters.end(); ++p) {
-			printf("%s=%d\n", p->first.c_str(), p->second.as_int());
-		}
-	}
 
 	void register_reverse_wire_map(string id, SigSpec sig)
 	{
@@ -148,7 +133,7 @@ struct FirrtlWorker
 	{
 	}
 
-	std::string make_expr(const SigSpec &sig, bool isSigned = false)
+	string make_expr(const SigSpec &sig)
 	{
 		string expr;
 
@@ -158,69 +143,23 @@ struct FirrtlWorker
 
 			if (chunk.wire == nullptr)
 			{
-				if (true) {
-					std::vector<RTLIL::State> bits = chunk.data;
-					auto bitSize = GetSize(bits);
-					bool negative = isSigned && bits[bitSize - 1] == State::S1;
-					new_expr = stringf("UInt<%d>(\"h", GetSize(bits));
+				std::vector<RTLIL::State> bits = chunk.data;
+				new_expr = stringf("UInt<%d>(\"h", GetSize(bits));
 
-					while (GetSize(bits) % 4 != 0)
-						bits.push_back(State::S0);
+				while (GetSize(bits) % 4 != 0)
+					bits.push_back(State::S0);
 
-					for (int i = GetSize(bits)-4; i >= 0; i -= 4)
-					{
-						int val = 0;
-						if (bits[i+0] == State::S1) val += 1;
-						if (bits[i+1] == State::S1) val += 2;
-						if (bits[i+2] == State::S1) val += 4;
-						if (bits[i+3] == State::S1) val += 8;
-						new_expr.push_back(val < 10 ? '0' + val : 'a' + val - 10);
-					}
-
-					new_expr += "\")";
-				} else {
-					std::vector<RTLIL::State> bits = chunk.data;
-					auto bitSize = GetSize(bits);
-					bool negative = isSigned && bits[bitSize - 1] == State::S1;
-					auto fill = isSigned ? bits[bitSize - 1] : State::S0;
-					const auto valueDelimiter = negative ? "" : "\"";
-
-					// Check for yosys single bit signed and expand it to the minimum FIRRTL sized width.
-					if (isSigned && bitSize == 1)
-					{
-						bits.push_back(fill);
-						bitSize = GetSize(bits);
-					}
-
-					// Generate the correct bits for a negative representation.
-					if (negative)
-					{
-						int carry = 1;
-						for (int i = 0; i < bitSize; i += 1)
-						{
-							int b = bits[i] == State::S1 ? 0 : 1;
-							b += carry;
-							bits[i] = b & 1 ? State::S1 : State::S0;
-							carry = b >> 1;
-						}
-					}
-					new_expr = stringf("%cInt<%d>(%s%s", (isSigned) ? 'S' : 'U', bitSize, valueDelimiter, negative ? "-" : "h");
-
+				for (int i = GetSize(bits)-4; i >= 0; i -= 4)
+				{
 					int val = 0;
-					for (int i = bitSize; i > 0; i -= 1)
-					{
-						int pos = i - 1;
-						int shift = pos % 4;
-						val |= (bits[pos] == State::S1 ? 1 : 0) << shift;
-						if (shift == 0)
-						{
-							new_expr.push_back(val < 10 ? '0' + val : 'a' + val - 10);
-							val = 0;
-						}
-					}
-
-					new_expr += stringf("%s)", valueDelimiter);
+					if (bits[i+0] == State::S1) val += 1;
+					if (bits[i+1] == State::S1) val += 2;
+					if (bits[i+2] == State::S1) val += 4;
+					if (bits[i+3] == State::S1) val += 8;
+					new_expr.push_back(val < 10 ? '0' + val : 'a' + val - 10);
 				}
+
+				new_expr += "\")";
 			}
 			else if (chunk.offset == 0 && chunk.width == chunk.wire->width)
 			{
@@ -348,33 +287,6 @@ struct FirrtlWorker
 		f << stringf("  module %s:\n", make_id(module->name));
 		vector<string> port_decls, wire_decls, cell_exprs, wire_exprs;
 
-		// Find the clock for this module. We may need it for register definitions.
-		auto clockName = "clock";
-
-		// Find registers and instances of other modules for this module.
-		pool<SigBit> reg_bits;
-		for (auto cell : module->cells())
-		{
-			if (false && cell->type.in("$ff", "$dff", "$_FF_", "$_DFF_P_", "$_DFF_N_")) {
-				// not using sigmap -- we want the net directly at the dff output
-				for (auto bit : cell->getPort("\\Q"))
-					reg_bits.insert(bit);
-			}
-			else if (false && cell->type[0] != '$')		// Is this a module instance?
-			{
-				// Find the wires FIRRTL will automatically generate for this instance, so we can avoid emitting them.
-				Module *moduleInstance = design->module(cell->type);
-				moduleInstances[cell->name] = moduleInstance;
-				std::string cell_name = cellname(cell);
-				for (auto it = cell->connections().begin(); it != cell->connections().end(); ++it) {
-					if (it->second.size() > 0) {
-						const std::string wireName = cell_name + "_" + make_id(it->first);
-						generatedWires[wireName] = moduleInstance->wires_.at(it->first);
-					}
-				}
-			}
-		}
-
 		for (auto wire : module->wires())
 		{
 			const auto wireName = make_id(wire->name);
@@ -387,21 +299,7 @@ struct FirrtlWorker
 			}
 			else
 			{
-				// Is this a module instance wire which we'll regenerate?
-				if (generatedWires.count(wireName) == 0) {
-					// Ignore yosys generated wires.
-//					if (wireName[0] == '_' && isdigit(wireName[1]))
-//						continue;
-//					std::cerr << wireName << std::endl;
-					bool is_register = false;
-					for (auto bit : SigSpec(wire))
-						if (reg_bits.count(bit))
-							is_register = true;
-					if (is_register)
-						wire_decls.push_back(stringf("    reg %s: UInt<%d>, asClock(%s)\n", wireName, wire->width, clockName));
-					else
-						wire_decls.push_back(stringf("    wire %s: UInt<%d>\n", wireName, wire->width));
-				}
+				wire_decls.push_back(stringf("    wire %s: UInt<%d>\n", wireName, wire->width));
 			}
 		}
 
@@ -419,7 +317,7 @@ struct FirrtlWorker
 				string y_id = make_id(cell->name);
 				bool is_signed = cell->parameters.at("\\A_SIGNED").as_bool();
 				int y_width =  cell->parameters.at("\\Y_WIDTH").as_int();
-				string a_expr = make_expr(cell->getPort("\\A"), is_signed);
+				string a_expr = make_expr(cell->getPort("\\A"));
 				wire_decls.push_back(stringf("    wire %s: UInt<%d>\n", y_id.c_str(), y_width));
 
 				if (cell->parameters.at("\\A_SIGNED").as_bool()) {
@@ -471,9 +369,9 @@ struct FirrtlWorker
 				string y_id = make_id(cell->name);
 				bool is_signed = cell->parameters.at("\\A_SIGNED").as_bool();
 				int y_width =  cell->parameters.at("\\Y_WIDTH").as_int();
-				string a_expr = make_expr(cell->getPort("\\A"), is_signed);
+				string a_expr = make_expr(cell->getPort("\\A"));
 				int a_padded_width = cell->parameters.at("\\A_WIDTH").as_int();
-				string b_expr = make_expr(cell->getPort("\\B"), cell->parameters.at("\\B_SIGNED").as_bool());
+				string b_expr = make_expr(cell->getPort("\\B"));
 				int b_padded_width = cell->parameters.at("\\B_WIDTH").as_int();
 				wire_decls.push_back(stringf("    wire %s: UInt<%d>\n", y_id.c_str(), y_width));
 
@@ -485,7 +383,6 @@ struct FirrtlWorker
 					if (cell->parameters.at("\\B_SIGNED").as_bool()) {
 						b_expr = "asSInt(" + b_expr + ")";
 					}
-					printParams(cell);
 					if (b_padded_width < y_width) {
 						auto b_sig = cell->getPort("\\B");
 						if (false && b_sig.is_fully_const()) {
@@ -517,10 +414,7 @@ struct FirrtlWorker
 
 				string primop;
                                 bool always_uint = false;
-				if (cell->type == "$add") {
-					printParams(cell);
-					primop = "add";
-				}
+				if (cell->type == "$add") primop = "add";
 				if (cell->type == "$sub") primop = "sub";
 				if (cell->type == "$mul") primop = "mul";
 				if (cell->type == "$div") primop = "div";
@@ -562,7 +456,8 @@ struct FirrtlWorker
                                         always_uint = true;
                                 }
 				if ((cell->type == "$shl") | (cell->type == "$sshl")) {
-					printParams(cell);
+					// FIRRTL will widen the result (y) by the amount of the shift.
+					// We'll need to offset this by extracting the un-widened portion as Verilog would do.
 					extract_y_bits = true;
 					// Is the shift amount constant?
 					auto b_sig = cell->getPort("\\B");
@@ -817,13 +712,6 @@ struct FirrtlWorker
 			if (wire->port_input)
 				continue;
 
-			const auto wireName = make_id(wire->name);
-			// Ignore assignments to generated wires. FIRRTL will re-generate the assignment.
-			if (generatedWires.count(wireName) != 0)
-				continue;
-//			// Ignore yosys generated wires.
-//			if (wireName[0] == '_' && isdigit(wireName[1]))
-//				continue;
 			int cursor = 0;
 			bool is_valid = false;
 			bool make_unconn_id = false;
