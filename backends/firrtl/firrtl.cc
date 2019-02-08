@@ -123,6 +123,20 @@ struct FirrtlWorker
 	RTLIL::Design *design;
 	std::string indent;
 
+	void printParams(Cell * cell) {
+		printf("%s: ", cell->type.c_str());
+		for (auto p = cell->parameters.begin(); p != cell->parameters.end(); ++p) {
+			printf("%s=%d\n", p->first.c_str(), p->second.as_int());
+		}
+	}
+
+	void printAttributes(Cell * cell) {
+		printf("%s: ", cell->type.c_str());
+		for (auto p = cell->attributes.begin(); p != cell->attributes.end(); ++p) {
+			printf("%s=%d\n", p->first.c_str(), p->second.as_int());
+		}
+	}
+
 	void register_reverse_wire_map(string id, SigSpec sig)
 	{
 		for (int i = 0; i < GetSize(sig); i++)
@@ -282,6 +296,22 @@ struct FirrtlWorker
 
 	}
 
+	// Given an expression for a shift amount, and a maximum width,
+	//  generate the FIRRTL expression for equivalent dynamic shift taking into account FIRRTL shift semantics.
+	std::string gen_dshl(const string b_expr, const int b_padded_width)
+	{
+		string result = b_expr;
+		if (b_padded_width >= FIRRTL_MAX_DSH_WIDTH_ERROR) {
+			int max_shift_width_bits = FIRRTL_MAX_DSH_WIDTH_ERROR - 1;
+			if (true) {
+				string max_shift_string = stringf("UInt<%d>(%d)", max_shift_width_bits, (1<<max_shift_width_bits) - 1);
+				// Deal with the difference in semantics between FIRRTL and verilog
+				result = stringf("mux(gt(%s, %s), %s, bits(%s, %d, 0))", b_expr.c_str(), max_shift_string.c_str(), max_shift_string.c_str(), b_expr.c_str(), max_shift_width_bits - 1);
+			}
+		}
+		return result;
+	}
+
 	void run()
 	{
 		f << stringf("  module %s:\n", make_id(module->name));
@@ -290,6 +320,12 @@ struct FirrtlWorker
 		for (auto wire : module->wires())
 		{
 			const auto wireName = make_id(wire->name);
+			// If a wire has initial data, issue a warning since FIRRTL doesn't currently support it.
+			if (wire->attributes.count("\\init")) {
+				log_warning("Initial value (%s) for (%s.%s) not supported\n",
+							wire->attributes.at("\\init").as_string().c_str(),
+							log_id(module), log_id(wire));
+			}
 			if (wire->port_id)
 			{
 				if (wire->port_input && wire->port_output)
@@ -305,6 +341,9 @@ struct FirrtlWorker
 
 		for (auto cell : module->cells())
 		{
+			printParams(cell);
+			printAttributes(cell);
+
 			bool extract_y_bits = false;		// Assume no extraction of final bits will be required.
 		    // Is this cell is a module instance?
 			if (cell->type[0] != '$')
@@ -330,21 +369,21 @@ struct FirrtlWorker
 				}
 
 				string primop;
-                                bool always_uint = false;
+				bool always_uint = false;
 				if (cell->type == "$not") primop = "not";
-				if (cell->type == "$neg") primop = "neg";
-				if (cell->type == "$logic_not") {
+				else if (cell->type == "$neg") primop = "neg";
+				else if (cell->type == "$logic_not") {
                                         primop = "eq";
                                         a_expr = stringf("%s, UInt(0)", a_expr.c_str());
                                 }
-				if (cell->type == "$reduce_and") primop = "andr";
-				if (cell->type == "$reduce_or") primop = "orr";
-				if (cell->type == "$reduce_xor") primop = "xorr";
-				if (cell->type == "$reduce_xnor") {
+				else if (cell->type == "$reduce_and") primop = "andr";
+				else if (cell->type == "$reduce_or") primop = "orr";
+				else if (cell->type == "$reduce_xor") primop = "xorr";
+				else if (cell->type == "$reduce_xnor") {
                                         primop = "not";
                                         a_expr = stringf("xorr(%s)", a_expr.c_str());
                                 }
-				if (cell->type == "$reduce_bool") {
+				else if (cell->type == "$reduce_bool") {
 					primop = "neq";
 					// Use the sign of the a_expr and its width as the type (UInt/SInt) and width of the comparand.
 					bool a_signed = cell->parameters.at("\\A_SIGNED").as_bool();
@@ -413,49 +452,49 @@ struct FirrtlWorker
 				}
 
 				string primop;
-                                bool always_uint = false;
+				bool always_uint = false;
 				if (cell->type == "$add") primop = "add";
-				if (cell->type == "$sub") primop = "sub";
-				if (cell->type == "$mul") primop = "mul";
-				if (cell->type == "$div") primop = "div";
-				if (cell->type == "$mod") primop = "rem";
-				if (cell->type == "$and") {
+				else if (cell->type == "$sub") primop = "sub";
+				else if (cell->type == "$mul") primop = "mul";
+				else if (cell->type == "$div") primop = "div";
+				else if (cell->type == "$mod") primop = "rem";
+				else if (cell->type == "$and") {
                                         primop = "and";
                                         always_uint = true;
                                 }
-				if (cell->type == "$or" ) {
+				else if (cell->type == "$or" ) {
                                         primop =  "or";
                                         always_uint = true;
                                 }
-				if (cell->type == "$xor") {
+				else if (cell->type == "$xor") {
                                         primop = "xor";
                                         always_uint = true;
                                 }
-				if ((cell->type == "$eq") | (cell->type == "$eqx")) {
+				else if ((cell->type == "$eq") | (cell->type == "$eqx")) {
                                         primop = "eq";
                                         always_uint = true;
                                 }
-				if ((cell->type == "$ne") | (cell->type == "$nex")) {
+				else if ((cell->type == "$ne") | (cell->type == "$nex")) {
                                         primop = "neq";
                                         always_uint = true;
                                 }
-				if (cell->type == "$gt") {
+				else if (cell->type == "$gt") {
                                         primop = "gt";
                                         always_uint = true;
                                 }
-				if (cell->type == "$ge") {
+				else if (cell->type == "$ge") {
                                         primop = "geq";
                                         always_uint = true;
                                 }
-				if (cell->type == "$lt") {
+				else if (cell->type == "$lt") {
                                         primop = "lt";
                                         always_uint = true;
                                 }
-				if (cell->type == "$le") {
+				else if (cell->type == "$le") {
                                         primop = "leq";
                                         always_uint = true;
                                 }
-				if ((cell->type == "$shl") | (cell->type == "$sshl")) {
+				else if ((cell->type == "$shl") | (cell->type == "$sshl")) {
 					// FIRRTL will widen the result (y) by the amount of the shift.
 					// We'll need to offset this by extracting the un-widened portion as Verilog would do.
 					extract_y_bits = true;
@@ -465,42 +504,57 @@ struct FirrtlWorker
 						primop = "shl";
 					} else {
 						primop = "dshl";
-						// Determine the maximum width of the shift argument in bits.
-						if (b_padded_width >= FIRRTL_MAX_DSH_WIDTH_ERROR) {
-							int max_shift_width_bits = FIRRTL_MAX_DSH_WIDTH_ERROR - 1;
-							if (true) {
-								string max_shift_string = stringf("UInt<%d>(%d)", max_shift_width_bits, (1<<max_shift_width_bits) - 1);
-								// Deal with the difference in semantics between FIRRTL and verilog
-								b_expr = stringf("mux(gt(%s, %s), %s, bits(%s, %d, 0))", b_expr.c_str(), max_shift_string.c_str(), max_shift_string.c_str(), b_expr.c_str(), max_shift_width_bits - 1);
-							}
-						}
+						// Convert from FIRRTL left shift semantics.
+						b_expr = gen_dshl(b_expr, b_padded_width);
 					}
 				}
-				if ((cell->type == "$shr") | (cell->type == "$sshr")) {
+				else if ((cell->type == "$shr") | (cell->type == "$sshr")) {
+					// We don't need to extract a specific range of bits.
+					extract_y_bits = false;
 					// Is the shift amount constant?
 					auto b_sig = cell->getPort("\\B");
 					if (b_sig.is_fully_const()) {
 						primop = "shr";
 					} else {
 						primop = "dshr";
-						// Determine the maximum width of the shift argument in bits.
-						if (b_padded_width >= FIRRTL_MAX_DSH_WIDTH_ERROR) {
-							int max_shift_width_bits = FIRRTL_MAX_DSH_WIDTH_ERROR - 1;
-							if (true) {
-								string max_shift_string = stringf("UInt<%d>(%d)", max_shift_width_bits, (1<<max_shift_width_bits) - 1);
-								// Deal with the difference in semantics between FIRRTL and verilog
-								b_expr = stringf("mux(gt(%s, %s), %s, bits(%s, %d, 0))", b_expr.c_str(), max_shift_string.c_str(), max_shift_string.c_str(), b_expr.c_str(), max_shift_width_bits - 1);
-							}
-						}
 					}
 				}
-				if ((cell->type == "$logic_and")) {
+				else if (cell->type == "$shiftx") {
+					// assign y = a[b +: y_width];
+					// We'll extract the correct bits as part of the primop.
+					primop = "bits";
+					extract_y_bits = false;
+					// Get the initial bit selector
+					auto b_sig = cell->getPort("\\B");
+					if (cell->getParam("\\B_SIGNED").as_bool()) {
+						// Use validif to constrain the selection
+						auto b_string = b_expr.c_str();
+						b_expr = stringf("validif(%s >= 0, %s)", b_string, b_string);
+					}
+					b_expr = stringf("%s, %d", b_expr.c_str(), y_width);
+				}
+				else if (cell->type == "$shift") {
+					// assign y = a >> b;
+					//  where b may be negative
+					primop = "dshr";
+					if (cell->getParam("\\B_SIGNED").as_bool()) {
+						// We generate a left or right shift based on the sign of b.
+						extract_y_bits = true;
+						auto b_string = b_expr.c_str();
+						b_expr = stringf("mux(%s < 0, %s, %s)",
+										 b_string,
+										 gen_dshl(b_expr, b_padded_width).c_str(),
+										 b_string
+										 );
+					}
+				}
+				else if ((cell->type == "$logic_and")) {
                                         primop = "and";
                                         a_expr = "neq(" + a_expr + ", UInt(0))";
                                         b_expr = "neq(" + b_expr + ", UInt(0))";
                                         always_uint = true;
                                 }
-				if ((cell->type == "$logic_or")) {
+				else if ((cell->type == "$logic_or")) {
                                         primop = "or";
                                         a_expr = "neq(" + a_expr + ", UInt(0))";
                                         b_expr = "neq(" + b_expr + ", UInt(0))";
