@@ -7,6 +7,14 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0714C15C22050C29001B92DD /* dauNpn.c in Sources */ = {isa = PBXBuildFile; fileRef = 0714C15A22050C29001B92DD /* dauNpn.c */; };
+		0714C15D22050C29001B92DD /* dauNpn2.c in Sources */ = {isa = PBXBuildFile; fileRef = 0714C15B22050C29001B92DD /* dauNpn2.c */; };
+		0714C17E22050D92001B92DD /* wln.c in Sources */ = {isa = PBXBuildFile; fileRef = 0714C16B22050D92001B92DD /* wln.c */; };
+		0714C18122050D92001B92DD /* wlnNdr.c in Sources */ = {isa = PBXBuildFile; fileRef = 0714C16F22050D92001B92DD /* wlnNdr.c */; };
+		0714C18422050D92001B92DD /* wlnNtk.c in Sources */ = {isa = PBXBuildFile; fileRef = 0714C17222050D92001B92DD /* wlnNtk.c */; };
+		0714C18722050D92001B92DD /* wlnObj.c in Sources */ = {isa = PBXBuildFile; fileRef = 0714C17522050D92001B92DD /* wlnObj.c */; };
+		0714C18A22050D92001B92DD /* wlnRetime.c in Sources */ = {isa = PBXBuildFile; fileRef = 0714C17822050D92001B92DD /* wlnRetime.c */; };
+		0714C18D22050D92001B92DD /* wlnWriteVer.c in Sources */ = {isa = PBXBuildFile; fileRef = 0714C17B22050D92001B92DD /* wlnWriteVer.c */; };
 		0726473020F6826C006A5587 /* ast.cc in Sources */ = {isa = PBXBuildFile; fileRef = 0726323120F68263006A5587 /* ast.cc */; };
 		0726473120F6826C006A5587 /* dpicall.cc in Sources */ = {isa = PBXBuildFile; fileRef = 0726323320F68263006A5587 /* dpicall.cc */; };
 		0726473220F6826C006A5587 /* genrtlil.cc in Sources */ = {isa = PBXBuildFile; fileRef = 0726323420F68263006A5587 /* genrtlil.cc */; };
@@ -1315,12 +1323,12 @@
 		0726559620F6827B006A5587 /* Makefile in Sources */ = {isa = PBXBuildFile; fileRef = 0726467220F6826B006A5587 /* Makefile */; };
 		0726559920F6827B006A5587 /* subcircuit.cc in Sources */ = {isa = PBXBuildFile; fileRef = 0726467620F6826B006A5587 /* subcircuit.cc */; };
 		072655A720F6867F006A5587 /* libffi.6.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 072655A420F6867E006A5587 /* libffi.6.dylib */; };
-		072655A820F6867F006A5587 /* libreadline.7.0.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 072655A520F6867F006A5587 /* libreadline.7.0.dylib */; };
 		072655A920F6867F006A5587 /* libtcl8.6.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 072655A620F6867F006A5587 /* libtcl8.6.dylib */; };
 		075BD0EA20F817BB008C3557 /* version_8b92ddb9.cc in Sources */ = {isa = PBXBuildFile; fileRef = 075BD0E920F817BB008C3557 /* version_8b92ddb9.cc */; };
 		077273CE215074E200DD4A0E /* extraUtilPath.c in Sources */ = {isa = PBXBuildFile; fileRef = 077273CD215074E100DD4A0E /* extraUtilPath.c */; };
 		077273D02150754500DD4A0E /* dauCount.c in Sources */ = {isa = PBXBuildFile; fileRef = 077273CF2150754500DD4A0E /* dauCount.c */; };
 		077273D22150759000DD4A0E /* extraUtilMaj.c in Sources */ = {isa = PBXBuildFile; fileRef = 077273D12150758F00DD4A0E /* extraUtilMaj.c */; };
+		07847B67221213EF00DC7460 /* libreadline.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 07847B66221213EF00DC7460 /* libreadline.tbd */; };
 		07BD9D3320F6C9B000E2E3B1 /* cloud.c in Sources */ = {isa = PBXBuildFile; fileRef = 07263B2920F68266006A5587 /* cloud.c */; };
 		07BD9D7220F71CCB00E2E3B1 /* satInter.c in Sources */ = {isa = PBXBuildFile; fileRef = 07BD9D4D20F71CCA00E2E3B1 /* satInter.c */; };
 		07BD9D7420F71CCB00E2E3B1 /* satInterA.c in Sources */ = {isa = PBXBuildFile; fileRef = 07BD9D4F20F71CCA00E2E3B1 /* satInterA.c */; };
@@ -1358,7 +1366,7 @@
 				"$(DERIVED_FILE_DIR)/$(INPUT_FILE_BASE).tab.cc",
 				"$(DERIVED_FILE_DIR)/$(INPUT_FILE_BASE).tab.hh",
 			);
-			script = "# $(YACC)\n/opt/local/bin/bison -d -r all -o $DERIVED_FILE_DIR/$INPUT_FILE_BASE.tab.cc $INPUT_FILE_DIR/$INPUT_FILE_NAME\n#mv $DERIVED_FILE_DIR/$INPUT_FILE_BASE.tab.hh $DERIVED_FILE_DIR/$INPUT_FILE_BASE.tab.h";
+			script = "# $(YACC)\n/opt/local/bin/bison -d -r all -o $DERIVED_FILE_DIR/$INPUT_FILE_BASE.tab.cc $INPUT_FILE_DIR/$INPUT_FILE_NAME\n#mv $DERIVED_FILE_DIR/$INPUT_FILE_BASE.tab.hh $DERIVED_FILE_DIR/$INPUT_FILE_BASE.tab.h\n";
 		};
 		07BD9D4720F70C1E00E2E3B1 /* PBXBuildRule */ = {
 			isa = PBXBuildRule;
@@ -1368,7 +1376,7 @@
 			outputFiles = (
 				"$(DERIVED_FILE_DIR)/$(INPUT_FILE_BASE).cc",
 			);
-			script = "# $(LEX)\n/opt/local/bin/flex -o $DERIVED_FILE_DIR/$INPUT_FILE_BASE.cc $INPUT_FILE_DIR/$INPUT_FILE_NAME";
+			script = "# $(LEX)\n/opt/local/bin/flex -o $DERIVED_FILE_DIR/$INPUT_FILE_BASE.cc $INPUT_FILE_DIR/$INPUT_FILE_NAME\n";
 		};
 /* End PBXBuildRule section */
 
@@ -1385,6 +1393,16 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		0714C15A22050C29001B92DD /* dauNpn.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = dauNpn.c; path = ../../../../../abc/src/opt/dau/dauNpn.c; sourceTree = "<group>"; };
+		0714C15B22050C29001B92DD /* dauNpn2.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = dauNpn2.c; path = ../../../../../abc/src/opt/dau/dauNpn2.c; sourceTree = "<group>"; };
+		0714C16A22050D92001B92DD /* module.make */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = module.make; sourceTree = "<group>"; };
+		0714C16B22050D92001B92DD /* wln.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = wln.c; sourceTree = "<group>"; };
+		0714C16D22050D92001B92DD /* wln.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = wln.h; sourceTree = "<group>"; };
+		0714C16F22050D92001B92DD /* wlnNdr.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = wlnNdr.c; sourceTree = "<group>"; };
+		0714C17222050D92001B92DD /* wlnNtk.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = wlnNtk.c; sourceTree = "<group>"; };
+		0714C17522050D92001B92DD /* wlnObj.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = wlnObj.c; sourceTree = "<group>"; };
+		0714C17822050D92001B92DD /* wlnRetime.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = wlnRetime.c; sourceTree = "<group>"; };
+		0714C17B22050D92001B92DD /* wlnWriteVer.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = wlnWriteVer.c; sourceTree = "<group>"; };
 		0726323020F68263006A5587 /* Makefile.inc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.pascal; path = Makefile.inc; sourceTree = "<group>"; };
 		0726323120F68263006A5587 /* ast.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ast.cc; sourceTree = "<group>"; };
 		0726323220F68263006A5587 /* ast.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ast.h; sourceTree = "<group>"; };
@@ -3639,6 +3657,7 @@
 		077273CD215074E100DD4A0E /* extraUtilPath.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = extraUtilPath.c; sourceTree = "<group>"; };
 		077273CF2150754500DD4A0E /* dauCount.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = dauCount.c; sourceTree = "<group>"; };
 		077273D12150758F00DD4A0E /* extraUtilMaj.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = extraUtilMaj.c; sourceTree = "<group>"; };
+		07847B66221213EF00DC7460 /* libreadline.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libreadline.tbd; path = usr/lib/libreadline.tbd; sourceTree = SDKROOT; };
 		07BD9D4920F71CCA00E2E3B1 /* license */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = license; sourceTree = "<group>"; };
 		07BD9D4A20F71CCA00E2E3B1 /* module.make */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = module.make; sourceTree = "<group>"; };
 		07BD9D4B20F71CCA00E2E3B1 /* satChecker.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = satChecker.c; sourceTree = "<group>"; };
@@ -3684,8 +3703,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				07847B67221213EF00DC7460 /* libreadline.tbd in Frameworks */,
 				072655A720F6867F006A5587 /* libffi.6.dylib in Frameworks */,
-				072655A820F6867F006A5587 /* libreadline.7.0.dylib in Frameworks */,
 				072655A920F6867F006A5587 /* libtcl8.6.dylib in Frameworks */,
 				0726476B20F6826C006A5587 /* pthreadVC2.lib in Frameworks */,
 				0726476A20F6826C006A5587 /* pthreadVC2.lib in Frameworks */,
@@ -3695,6 +3714,22 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		0714C16922050D92001B92DD /* wln */ = {
+			isa = PBXGroup;
+			children = (
+				0714C16A22050D92001B92DD /* module.make */,
+				0714C16B22050D92001B92DD /* wln.c */,
+				0714C16D22050D92001B92DD /* wln.h */,
+				0714C16F22050D92001B92DD /* wlnNdr.c */,
+				0714C17222050D92001B92DD /* wlnNtk.c */,
+				0714C17522050D92001B92DD /* wlnObj.c */,
+				0714C17822050D92001B92DD /* wlnRetime.c */,
+				0714C17B22050D92001B92DD /* wlnWriteVer.c */,
+			);
+			name = wln;
+			path = ../../../../abc/src/base/wln;
+			sourceTree = "<group>";
+		};
 		0726322E20F68263006A5587 /* frontends */ = {
 			isa = PBXGroup;
 			children = (
@@ -4791,6 +4826,7 @@
 		072636B320F68265006A5587 /* base */ = {
 			isa = PBXGroup;
 			children = (
+				0714C16922050D92001B92DD /* wln */,
 				072636B420F68265006A5587 /* abc */,
 				072636FE20F68265006A5587 /* abci */,
 				072637EC20F68265006A5587 /* acb */,
@@ -6101,6 +6137,8 @@
 		07263EBD20F68266006A5587 /* dau */ = {
 			isa = PBXGroup;
 			children = (
+				0714C15A22050C29001B92DD /* dauNpn.c */,
+				0714C15B22050C29001B92DD /* dauNpn2.c */,
 				077273CF2150754500DD4A0E /* dauCount.c */,
 				07263EBE20F68266006A5587 /* dau.c */,
 				07263EBF20F68266006A5587 /* dau.h */,
@@ -7484,6 +7522,7 @@
 		072655A320F6867D006A5587 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				07847B66221213EF00DC7460 /* libreadline.tbd */,
 				072655A420F6867E006A5587 /* libffi.6.dylib */,
 				072655A520F6867F006A5587 /* libreadline.7.0.dylib */,
 				072655A620F6867F006A5587 /* libtcl8.6.dylib */,
@@ -7571,6 +7610,23 @@
 		};
 /* End PBXGroup section */
 
+/* Begin PBXLegacyTarget section */
+		07B2B302220908760032A3C5 /* MakeBuild */ = {
+			isa = PBXLegacyTarget;
+			buildArgumentsString = "$(ACTION)";
+			buildConfigurationList = 07B2B305220908760032A3C5 /* Build configuration list for PBXLegacyTarget "MakeBuild" */;
+			buildPhases = (
+			);
+			buildToolPath = /opt/local/bin/gmake;
+			buildWorkingDirectory = "";
+			dependencies = (
+			);
+			name = MakeBuild;
+			passBuildSettingsInEnvironment = 1;
+			productName = MakeBuild;
+		};
+/* End PBXLegacyTarget section */
+
 /* Begin PBXNativeTarget section */
 		07E612FD20F6805C00A2EBFA /* yosys-xc */ = {
 			isa = PBXNativeTarget;
@@ -7604,6 +7660,9 @@
 				LastUpgradeCheck = 0940;
 				ORGANIZATIONNAME = "Jim Lawson";
 				TargetAttributes = {
+					07B2B302220908760032A3C5 = {
+						CreatedOnToolsVersion = 10.1;
+					};
 					07E612FD20F6805C00A2EBFA = {
 						CreatedOnToolsVersion = 9.4.1;
 					};
@@ -7622,6 +7681,7 @@
 			projectRoot = "";
 			targets = (
 				07E612FD20F6805C00A2EBFA /* yosys-xc */,
+				07B2B302220908760032A3C5 /* MakeBuild */,
 			);
 		};
 /* End PBXProject section */
@@ -7991,6 +8051,7 @@
 				07264C5E20F6826F006A5587 /* cuddAddFind.c in Sources */,
 				0726480720F6826C006A5587 /* giaDfs.c in Sources */,
 				0726554220F6827A006A5587 /* aigmap.cc in Sources */,
+				0714C18422050D92001B92DD /* wlnNtk.c in Sources */,
 				072649CA20F6826D006A5587 /* abcHieNew.c in Sources */,
 				0726492E20F6826C006A5587 /* ivyHaig.c in Sources */,
 				07264B0820F6826E006A5587 /* bacPrsTrans.c in Sources */,
@@ -8409,6 +8470,7 @@
 				07264C3B20F6826E006A5587 /* wlcWin.c in Sources */,
 				07F0CE9220F7B78E00D4D3E1 /* calc.cc in Sources */,
 				07264FB420F68272006A5587 /* mvcContain.c in Sources */,
+				0714C15D22050C29001B92DD /* dauNpn2.c in Sources */,
 				07264D2520F6826F006A5587 /* extraBddCas.c in Sources */,
 				072653D320F68278006A5587 /* bmc.c in Sources */,
 				072650E520F68274006A5587 /* fxuList.c in Sources */,
@@ -8632,6 +8694,7 @@
 				07264EFC20F68271006A5587 /* mpmMap.c in Sources */,
 				0726542020F68279006A5587 /* bmcMaj2.c in Sources */,
 				0726526920F68276006A5587 /* acecPo.c in Sources */,
+				0714C15C22050C29001B92DD /* dauNpn.c in Sources */,
 				0726555E20F6827B006A5587 /* Makefile.inc in Sources */,
 				07264F1A20F68271006A5587 /* sclLibUtil.c in Sources */,
 				075BD0EA20F817BB008C3557 /* version_8b92ddb9.cc in Sources */,
@@ -8767,6 +8830,7 @@
 				07264EBE20F68271006A5587 /* mapperSwitch.c in Sources */,
 				07264C0B20F6826E006A5587 /* wlcAbs.c in Sources */,
 				0726535820F68277006A5587 /* kliveness.c in Sources */,
+				0714C17E22050D92001B92DD /* wln.c in Sources */,
 				07264B9C20F6826E006A5587 /* ioWriteAiger.c in Sources */,
 				07264EA820F68271006A5587 /* mapperCreate.c in Sources */,
 				0726476020F6826C006A5587 /* ice40_ffinit.cc in Sources */,
@@ -8833,6 +8897,7 @@
 				07264DC320F68270006A5587 /* kitBdd.c in Sources */,
 				07264A3F20F6826D006A5587 /* abcGen.c in Sources */,
 				0726528C20F68276006A5587 /* cecCore.c in Sources */,
+				0714C18722050D92001B92DD /* wlnObj.c in Sources */,
 				07264DDD20F68270006A5587 /* kitSop.c in Sources */,
 				0726506B20F68273006A5587 /* cutMerge.c in Sources */,
 				0726488920F6826C006A5587 /* giaRex.c in Sources */,
@@ -8875,6 +8940,7 @@
 				07264D2220F6826F006A5587 /* extraBddAuto.c in Sources */,
 				072654F920F6827A006A5587 /* splitnets.cc in Sources */,
 				07264EFF20F68271006A5587 /* mpmMig.c in Sources */,
+				0714C18A22050D92001B92DD /* wlnRetime.c in Sources */,
 				0726557C20F6827B006A5587 /* spice.cc in Sources */,
 				0726534220F68277006A5587 /* intMan.c in Sources */,
 				0726479B20F6826C006A5587 /* aigPack.c in Sources */,
@@ -8894,6 +8960,7 @@
 				07264CE220F6826F006A5587 /* cuddTable.c in Sources */,
 				0726480D20F6826C006A5587 /* giaEdge.c in Sources */,
 				07264D4120F6826F006A5587 /* llb1Constr.c in Sources */,
+				0714C18122050D92001B92DD /* wlnNdr.c in Sources */,
 				07BD9D8220F71CCB00E2E3B1 /* satSolver2i.c in Sources */,
 				0726495820F6826C006A5587 /* saigConstr.c in Sources */,
 				0726485A20F6826C006A5587 /* giaLf.c in Sources */,
@@ -8998,6 +9065,7 @@
 				072649F820F6826D006A5587 /* abcBalance.c in Sources */,
 				07F0CE9320F7B79600D4D3E1 /* yosys.cc in Sources */,
 				07264FC320F68272006A5587 /* mvcList.c in Sources */,
+				0714C18D22050D92001B92DD /* wlnWriteVer.c in Sources */,
 				07264FA920F68272006A5587 /* extraZddTrunc.c in Sources */,
 				07264ADC20F6826D006A5587 /* acbAbc.c in Sources */,
 				072651B320F68275006A5587 /* sbd.c in Sources */,
@@ -9035,6 +9103,34 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
+		07B2B303220908760032A3C5 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				DEBUGGING_SYMBOLS = YES;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				OTHER_CFLAGS = "";
+				OTHER_LDFLAGS = "";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		07B2B304220908760032A3C5 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				MTL_FAST_MATH = YES;
+				OTHER_CFLAGS = "";
+				OTHER_LDFLAGS = "";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
 		07E6130320F6805C00A2EBFA /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -9167,16 +9263,17 @@
 				HEADER_SEARCH_PATHS = "";
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
-					"$(PROJECT_DIR)/abc/lib/x64",
-					"$(PROJECT_DIR)/abc/lib/x86",
 					/opt/local/lib,
 				);
+				MACOSX_DEPLOYMENT_TARGET = 10.14;
+				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				USER_HEADER_SEARCH_PATHS = (
 					abc/src,
 					.,
 					$DERIVED_FILE_DIR,
 				);
+				VALID_ARCHS = x86_64;
 			};
 			name = Debug;
 		};
@@ -9203,22 +9300,32 @@
 				HEADER_SEARCH_PATHS = "";
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
-					"$(PROJECT_DIR)/abc/lib/x64",
-					"$(PROJECT_DIR)/abc/lib/x86",
 					/opt/local/lib,
 				);
+				MACOSX_DEPLOYMENT_TARGET = 10.14;
+				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				USER_HEADER_SEARCH_PATHS = (
 					abc/src,
 					.,
 					$DERIVED_FILE_DIR,
 				);
+				VALID_ARCHS = x86_64;
 			};
 			name = Release;
 		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		07B2B305220908760032A3C5 /* Build configuration list for PBXLegacyTarget "MakeBuild" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				07B2B303220908760032A3C5 /* Debug */,
+				07B2B304220908760032A3C5 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		07E612F920F6805C00A2EBFA /* Build configuration list for PBXProject "yosys-xc" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

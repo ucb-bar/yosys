@@ -1,6 +1,70 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Workspace
    version = "1.0">
+   <Group
+      location = "group:../../abc/src/base/wln"
+      name = "wln">
+      <FileRef
+         location = "group:module.make">
+      </FileRef>
+      <FileRef
+         location = "group:wln.c">
+      </FileRef>
+      <FileRef
+         location = "group:wln.d">
+      </FileRef>
+      <FileRef
+         location = "group:wln.h">
+      </FileRef>
+      <FileRef
+         location = "group:wln.o">
+      </FileRef>
+      <FileRef
+         location = "group:wlnNdr.c">
+      </FileRef>
+      <FileRef
+         location = "group:wlnNdr.d">
+      </FileRef>
+      <FileRef
+         location = "group:wlnNdr.o">
+      </FileRef>
+      <FileRef
+         location = "group:wlnNtk.c">
+      </FileRef>
+      <FileRef
+         location = "group:wlnNtk.d">
+      </FileRef>
+      <FileRef
+         location = "group:wlnNtk.o">
+      </FileRef>
+      <FileRef
+         location = "group:wlnObj.c">
+      </FileRef>
+      <FileRef
+         location = "group:wlnObj.d">
+      </FileRef>
+      <FileRef
+         location = "group:wlnObj.o">
+      </FileRef>
+      <FileRef
+         location = "group:wlnRetime.c">
+      </FileRef>
+      <FileRef
+         location = "group:wlnRetime.d">
+      </FileRef>
+      <FileRef
+         location = "group:wlnRetime.o">
+      </FileRef>
+      <FileRef
+         location = "group:wlnWriteVer.c">
+      </FileRef>
+      <FileRef
+         location = "group:wlnWriteVer.d">
+      </FileRef>
+      <FileRef
+         location = "group:wlnWriteVer.o">
+      </FileRef>
+   </Group>
    <FileRef
       location = "self:">
    </FileRef>
