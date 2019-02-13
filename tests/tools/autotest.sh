@@ -4,7 +4,7 @@ libs=""
 genvcd=false
 use_xsim=false
 use_modelsim=false
-verbose=false
+verbose=true
 keeprunning=false
 makejmode=false
 frontend="verilog"
@@ -17,12 +17,14 @@ scriptfiles=""
 scriptopt=""
 toolsdir="$(cd $(dirname $0); pwd)"
 warn_iverilog_git=false
+firrtl2verilog="java -cp /Users/jrl/noArc/clients/ucb/git/ucb-bar/firrtl/utils/bin/firrtl.jar firrtl.Driver"
+xfirrtl="../xfirrtl"
 
 if [ ! -f $toolsdir/cmp_tbdata -o $toolsdir/cmp_tbdata.c -nt $toolsdir/cmp_tbdata ]; then
 	( set -ex; ${CC:-gcc} -Wall -o $toolsdir/cmp_tbdata $toolsdir/cmp_tbdata.c; ) || exit 1
 fi
 
-while getopts xmGl:wkjvref:s:p:n:S:I: opt; do
+while getopts xmGl:wkjvref:s:p:n:S:I:-: opt; do
 	case "$opt" in
 		x)
 			use_xsim=true ;;
@@ -59,11 +61,36 @@ while getopts xmGl:wkjvref:s:p:n:S:I: opt; do
 			include_opts="$include_opts -I $OPTARG"
 			xinclude_opts="$xinclude_opts -i $OPTARG"
 			minclude_opts="$minclude_opts +incdir+$OPTARG" ;;
+		-)
+			case "${OPTARG}" in
+			    xfirrtl)
+			    	xfirrtl="${!OPTIND}"
+				OPTIND=$(( $OPTIND + 1 ))
+				;;
+			    *)
+			    	if [ "$OPTERR" == 1 ] && [ "${optspec:0:1}" != ":" ]; then
+				    echo "Unknown option --${OPTARG}" >&2
+				fi
+				;;
+			esac;;
 		*)
 			echo "Usage: $0 [-x|-m] [-G] [-w] [-k] [-j] [-v] [-r] [-e] [-l libs] [-f frontend] [-s script] [-p cmdstring] [-n iters] [-S seed] [-I incdir] verilog-files\n" >&2
 			exit 1
 	esac
 done
+
+# OSX bash still doesn't have associative arrays
+#declare -A xclude
+#if [ -n "$xfirrtl" ]; then
+#    if [ -r "$xfirrtl" ]; then
+#	while read func; do
+#	    xclude[$func]=$func
+#	done < "$xfirrtl"
+#    else
+#	echo "Can't read \"$xfirrtl\"" >&2
+#	exit 1
+#    fi
+#fi
 
 compile_and_run() {
 	exe="$1"; output="$2"; shift 2
@@ -148,6 +175,13 @@ do
 		else
 			test_passes -f "$frontend $include_opts" -p "hierarchy; proc; opt; memory; opt; fsm; opt -full -fine" ${bn}_ref.v
 			test_passes -f "$frontend $include_opts" -p "hierarchy; synth -run coarse; techmap; opt; abc -dff" ${bn}_ref.v
+			if [ -n "$firrtl2verilog" ]; then
+			    if test -z "$xfirrtl" || ! grep "$fn" "$xfirrtl" ; then
+				"$toolsdir"/../../yosys -b "firrtl" -o ${bn}_ref.fir -f "$frontend $include_opts" -p "prep -nordff; proc; opt; memory; opt; fsm; opt -full -fine; pmuxtree" ${bn}_ref.v
+				$firrtl2verilog -i ${bn}_ref.fir -o ${bn}_ref.fir.v  -X verilog
+				test_passes -f "$frontend $include_opts" -p "hierarchy; proc; opt; memory; opt; fsm; opt -full -fine" ${bn}_ref.fir.v
+			    fi
+			fi
 		fi
 		touch ../${bn}.log
 	}
