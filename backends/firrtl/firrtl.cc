@@ -861,27 +861,60 @@ struct FirrtlBackend : public Backend {
 		log("    write_firrtl [options] [filename]\n");
 		log("\n");
 		log("Write a FIRRTL netlist of the current design.\n");
+		log("    -top <module>\n");
+		log("        use the specified module as top module\n");
+		log("The following commands are executed by this command:\n");
+		log("        hierarchy -check [-top <top> | -autotop]\n");
 		log("\n");
 	}
 	void execute(std::ostream *&f, std::string filename, std::vector<std::string> args, RTLIL::Design *design) YS_OVERRIDE
 	{
+		std::string top_opt = "-auto-top";
 		size_t argidx;
 		for (argidx = 1; argidx < args.size(); argidx++)
 		{
-			// if (args[argidx] == "-aig") {
-			// 	aig_mode = true;
-			// 	continue;
-			// }
-			break;
+			if (args[argidx] == "-top" && argidx+1 < args.size()) {
+				top_opt = "-top " + args[++argidx];
+				continue;
+			}
+		}
+		// If we weren't explicitly passed a filename, use the last argument (if it isn't a flag).
+		if (filename == "") {
+			if (args[argidx - 1][0] != '-') {
+				// extra_args and friends need to see this argument.
+				argidx -= 1;
+				filename = args[argidx];
+			}
 		}
 		extra_args(f, filename, args, argidx);
 
+		if (!design->full_selection())
+			log_cmd_error("This command only operates on fully selected designs!\n");
+
 		log_header(design, "Executing FIRRTL backend.\n");
+		log_push();
+
+		Pass::call(design, stringf("hierarchy -check %s", top_opt.c_str()));
 
 		Module *top = design->top_module();
 
-		if (top == nullptr)
+		if (top == nullptr) {
+			Module *last = nullptr;
+			for (auto &mod_it : design->modules_) {
+				if (mod_it.second->get_bool_attribute("\\top"))
+					top = mod_it.second;
+				last = mod_it.second;
+			}
+			if (top == nullptr) {
+				top = last;
+				if (top != nullptr) {
+					log_warning("No top module found - using last module %s\n", top->name.c_str());
+				}
+			}
+		}
+		if (top == nullptr) {
 			log_error("No top module found!\n");
+		}
 
 		namecache.clear();
 		autoid_counter = 0;
