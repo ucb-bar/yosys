@@ -220,6 +220,8 @@ struct FirrtlWorker
 				{
 					switch (*it) {
 						case '\\': /* FALL_THROUGH */
+						case '=': /* FALL_THROUGH */
+						case '\'': /* FALL_THROUGH */
 						case '$': instanceOf.append("_"); break;
 						default: instanceOf.append(1, *it); break;
 					}
@@ -341,8 +343,8 @@ struct FirrtlWorker
 
 		for (auto cell : module->cells())
 		{
-			printParams(cell);
-			printAttributes(cell);
+//			printParams(cell);
+//			printAttributes(cell);
 
 			bool extract_y_bits = false;		// Assume no extraction of final bits will be required.
 		    // Is this cell is a module instance?
@@ -402,8 +404,8 @@ struct FirrtlWorker
 				continue;
 			}
 			if (cell->type.in("$add", "$sub", "$mul", "$div", "$mod", "$xor", "$and", "$or", "$eq", "$eqx",
-                                        "$gt", "$ge", "$lt", "$le", "$ne", "$nex", "$shr", "$sshr", "$sshl", "$shl",
-                                        "$logic_and", "$logic_or"))
+							  "$gt", "$ge", "$lt", "$le", "$ne", "$nex", "$shr", "$sshr", "$sshl", "$shl",
+							  "$logic_and", "$logic_or"))
 			{
 				string y_id = make_id(cell->name);
 				bool is_signed = cell->parameters.at("\\A_SIGNED").as_bool();
@@ -517,35 +519,6 @@ struct FirrtlWorker
 						primop = "shr";
 					} else {
 						primop = "dshr";
-					}
-				}
-				else if (cell->type == "$shiftx") {
-					// assign y = a[b +: y_width];
-					// We'll extract the correct bits as part of the primop.
-					primop = "bits";
-					extract_y_bits = false;
-					// Get the initial bit selector
-					auto b_sig = cell->getPort("\\B");
-					if (cell->getParam("\\B_SIGNED").as_bool()) {
-						// Use validif to constrain the selection
-						auto b_string = b_expr.c_str();
-						b_expr = stringf("validif(%s >= 0, %s)", b_string, b_string);
-					}
-					b_expr = stringf("%s, %d", b_expr.c_str(), y_width);
-				}
-				else if (cell->type == "$shift") {
-					// assign y = a >> b;
-					//  where b may be negative
-					primop = "dshr";
-					if (cell->getParam("\\B_SIGNED").as_bool()) {
-						// We generate a left or right shift based on the sign of b.
-						extract_y_bits = true;
-						auto b_string = b_expr.c_str();
-						b_expr = stringf("mux(%s < 0, %s, %s)",
-										 b_string,
-										 gen_dshl(b_expr, b_padded_width).c_str(),
-										 b_string
-										 );
 					}
 				}
 				else if ((cell->type == "$logic_and")) {
@@ -736,15 +709,62 @@ struct FirrtlWorker
 				process_instance(cell, wire_exprs);
 				continue;
 			}
-			else
-			{
-				log_warning("Cell type not supported: %s (%s.%s)\n", log_id(cell->type), log_id(module), log_id(cell));
-				string mem_id = make_id(cell->name);
-				for (auto p = cell->parameters.begin(); p != cell->parameters.end(); ++p) {
-					printf("%s\n", p->first.c_str());
-				}
+			if (cell->type == "$shiftx") {
+				// assign y = a[b +: y_width];
+				// We'll extract the correct bits as part of the primop.
 
+				string y_id = make_id(cell->name);
+				int y_width =  cell->parameters.at("\\Y_WIDTH").as_int();
+				string a_expr = make_expr(cell->getPort("\\A"));
+				// Get the initial bit selector
+				string b_expr = make_expr(cell->getPort("\\B"));
+				wire_decls.push_back(stringf("    wire %s: UInt<%d>\n", y_id.c_str(), y_width));
+
+				if (cell->getParam("\\B_SIGNED").as_bool()) {
+					// Use validif to constrain the selection (test the sign bit)
+					auto b_string = b_expr.c_str();
+					int b_sign = cell->parameters.at("\\B_WIDTH").as_int() - 1;
+					b_expr = stringf("validif(not(bits(%s, %d, %d)), %s)", b_string, b_sign, b_sign, b_string);
+				}
+				string expr = stringf("dshr(%s, %s)", a_expr.c_str(), b_expr.c_str());
+
+				cell_exprs.push_back(stringf("    %s <= %s\n", y_id.c_str(), expr.c_str()));
+				register_reverse_wire_map(y_id, cell->getPort("\\Y"));
 				continue;
+			}
+			if (cell->type == "$shift") {
+				// assign y = a >> b;
+				//  where b may be negative
+
+				string y_id = make_id(cell->name);
+				int y_width =  cell->parameters.at("\\Y_WIDTH").as_int();
+				string a_expr = make_expr(cell->getPort("\\A"));
+				string b_expr = make_expr(cell->getPort("\\B"));
+				auto b_string = b_expr.c_str();
+				int b_padded_width = cell->parameters.at("\\B_WIDTH").as_int();
+				string expr;
+				wire_decls.push_back(stringf("    wire %s: UInt<%d>\n", y_id.c_str(), y_width));
+
+				if (cell->getParam("\\B_SIGNED").as_bool()) {
+					// We generate a left or right shift based on the sign of b.
+					std::string dshl = stringf("bits(dshl(%s, %s), 0, %d)", a_expr.c_str(), gen_dshl(b_expr, b_padded_width).c_str(), y_width);
+					std::string dshr = stringf("dshr(%s, %s)", a_expr.c_str(), b_string);
+					expr = stringf("mux(%s < 0, %s, %s)",
+									 b_string,
+									 dshl.c_str(),
+									 dshr.c_str()
+									 );
+				} else {
+					expr = stringf("dshr(%s, %s)", a_expr.c_str(), b_string);
+				}
+				cell_exprs.push_back(stringf("    %s <= %s\n", y_id.c_str(), expr.c_str()));
+				register_reverse_wire_map(y_id, cell->getPort("\\Y"));
+				continue;
+			}
+			log_warning("Cell type not supported: %s (%s.%s)\n", log_id(cell->type), log_id(module), log_id(cell));
+			string mem_id = make_id(cell->name);
+			for (auto p = cell->parameters.begin(); p != cell->parameters.end(); ++p) {
+				printf("%s\n", p->first.c_str());
 			}
 		}
 
@@ -861,26 +881,17 @@ struct FirrtlBackend : public Backend {
 		log("    write_firrtl [options] [filename]\n");
 		log("\n");
 		log("Write a FIRRTL netlist of the current design.\n");
-		log("    -top <module>\n");
-		log("        use the specified module as top module\n");
 		log("The following commands are executed by this command:\n");
-		log("        hierarchy -check [-top <top> | -autotop]\n");
+		log("        pmuxtree\n");
 		log("\n");
 	}
 	void execute(std::ostream *&f, std::string filename, std::vector<std::string> args, RTLIL::Design *design) YS_OVERRIDE
 	{
-		std::string top_opt = "-auto-top";
-		size_t argidx;
-		for (argidx = 1; argidx < args.size(); argidx++)
-		{
-			if (args[argidx] == "-top" && argidx+1 < args.size()) {
-				top_opt = "-top " + args[++argidx];
-				continue;
-			}
-		}
+		size_t argidx = args.size();	// We aren't expecting any arguments.
+
 		// If we weren't explicitly passed a filename, use the last argument (if it isn't a flag).
 		if (filename == "") {
-			if (args[argidx - 1][0] != '-') {
+			if (argidx > 0 && args[argidx - 1][0] != '-') {
 				// extra_args and friends need to see this argument.
 				argidx -= 1;
 				filename = args[argidx];
@@ -894,37 +905,28 @@ struct FirrtlBackend : public Backend {
 		log_header(design, "Executing FIRRTL backend.\n");
 		log_push();
 
-		Pass::call(design, stringf("hierarchy -check %s", top_opt.c_str()));
-
-		Module *top = design->top_module();
-
-		if (top == nullptr) {
-			Module *last = nullptr;
-			for (auto &mod_it : design->modules_) {
-				if (mod_it.second->get_bool_attribute("\\top"))
-					top = mod_it.second;
-				last = mod_it.second;
-			}
-			if (top == nullptr) {
-				top = last;
-				if (top != nullptr) {
-					log_warning("No top module found - using last module %s\n", top->name.c_str());
-				}
-			}
-		}
-		if (top == nullptr) {
-			log_error("No top module found!\n");
-		}
+		Pass::call(design, stringf("pmuxtree"));
 
 		namecache.clear();
 		autoid_counter = 0;
 
+		// Get the top module, or a reasonable facsimile - we need something for the circuit name.
+		Module *top = design->top_module();
+		Module *last = nullptr;
+		// Generate module and wire names.
 		for (auto module : design->modules()) {
 			make_id(module->name);
+			last = module;
+			if (top == nullptr && module->get_bool_attribute("\\top")) {
+				top = module;
+			}
 			for (auto wire : module->wires())
 				if (wire->port_id)
 					make_id(wire->name);
 		}
+
+		if (top == nullptr)
+			top = last;
 
 		*f << stringf("circuit %s:\n", make_id(top->name));
 
