@@ -4,7 +4,7 @@ libs=""
 genvcd=false
 use_xsim=false
 use_modelsim=false
-verbose=true
+verbose=false
 keeprunning=false
 makejmode=false
 frontend="verilog"
@@ -17,7 +17,7 @@ scriptfiles=""
 scriptopt=""
 toolsdir="$(cd $(dirname $0); pwd)"
 warn_iverilog_git=false
-firrtl2verilog="java -cp /Users/jrl/noArc/clients/ucb/git/ucb-bar/firrtl/utils/bin/firrtl.jar firrtl.Driver"
+firrtl2verilog=""
 xfirrtl="../xfirrtl"
 
 if [ ! -f $toolsdir/cmp_tbdata -o $toolsdir/cmp_tbdata.c -nt $toolsdir/cmp_tbdata ]; then
@@ -65,6 +65,10 @@ while getopts xmGl:wkjvref:s:p:n:S:I:-: opt; do
 			case "${OPTARG}" in
 			    xfirrtl)
 			    	xfirrtl="${!OPTIND}"
+				OPTIND=$(( $OPTIND + 1 ))
+				;;
+			    firrtl2verilog)
+			    	firrtl2verilog="${!OPTIND}"
 				OPTIND=$(( $OPTIND + 1 ))
 				;;
 			    *)
