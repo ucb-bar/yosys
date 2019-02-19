@@ -1,3 +1,4 @@
+# This file contains the names of verilog files to exclude from verilog to FIRRTL regression tests due to known failures.
 code_hdl_models_arbiter.v	error: reg rst; cannot be driven by primitives or continuous assignment.
 code_hdl_models_clk_div_45.v	yosys issue: 2nd PMUXTREE pass yields: ERROR: Negative edge clock on FF clk_div_45.$procdff$49.
 code_hdl_models_d_ff_gates.v	combinational loop

@@ -17,6 +17,10 @@ scriptfiles=""
 scriptopt=""
 toolsdir="$(cd $(dirname $0); pwd)"
 warn_iverilog_git=false
+# The following are used in verilog to firrtl regression tests.
+# Typically these will be passed as environment variables:
+#EXTRA_FLAGS="--firrtl2verilog 'java -cp /.../firrtl/utils/bin/firrtl.jar firrtl.Driver'"
+# The tests are skipped if firrtl2verilog is the empty string (the default).
 firrtl2verilog=""
 xfirrtl="../xfirrtl"
 
@@ -78,23 +82,10 @@ while getopts xmGl:wkjvref:s:p:n:S:I:-: opt; do
 				;;
 			esac;;
 		*)
-			echo "Usage: $0 [-x|-m] [-G] [-w] [-k] [-j] [-v] [-r] [-e] [-l libs] [-f frontend] [-s script] [-p cmdstring] [-n iters] [-S seed] [-I incdir] verilog-files\n" >&2
+			echo "Usage: $0 [-x|-m] [-G] [-w] [-k] [-j] [-v] [-r] [-e] [-l libs] [-f frontend] [-s script] [-p cmdstring] [-n iters] [-S seed] [-I incdir] [--xfirrtl FIRRTL test exclude file] [--firrtl2verilog command to generate verilog from firrtl] verilog-files\n" >&2
 			exit 1
 	esac
 done
-
-# OSX bash still doesn't have associative arrays
-#declare -A xclude
-#if [ -n "$xfirrtl" ]; then
-#    if [ -r "$xfirrtl" ]; then
-#	while read func; do
-#	    xclude[$func]=$func
-#	done < "$xfirrtl"
-#    else
-#	echo "Can't read \"$xfirrtl\"" >&2
-#	exit 1
-#    fi
-#fi
 
 compile_and_run() {
 	exe="$1"; output="$2"; shift 2
@@ -139,6 +130,8 @@ do
 		cd ${bn}.out
 		fn=$(basename $fn)
 		bn=$(basename $bn)
+
+		rm -f ${bn}_ref.fir
 
 		egrep -v '^\s*`timescale' ../$fn > ${bn}_ref.v
 
@@ -198,14 +191,18 @@ do
 		( set -ex; body; ) > ${bn}.err 2>&1
 	fi
 
+	did_firrtl=""
+	if [ -f ${bn}.out/${bn}_ref.fir ]; then
+	    did_firrtl="+FIRRTL "
+	fi
 	if [ -f ${bn}.log ]; then
 		mv ${bn}.err ${bn}.log
-		echo "${status_prefix}-> ok"
+		echo "${status_prefix}${did_firrtl}-> ok"
 	elif [ -f ${bn}.skip ]; then
 		mv ${bn}.err ${bn}.skip
 		echo "${status_prefix}-> skip"
 	else
-		echo "${status_prefix}-> ERROR!"
+		echo "${status_prefix}${did_firrtl}-> ERROR!"
 		if $warn_iverilog_git; then
 			echo "Note: Make sure that 'iverilog' is an up-to-date git checkout of Icarus Verilog."
 		fi

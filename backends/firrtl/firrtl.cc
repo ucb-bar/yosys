@@ -213,31 +213,16 @@ struct FirrtlWorker
 		// If this is a parameterized module, its parent module is encoded in the cell type
 		if (cell->type.substr(0, 8) == "$paramod")
 		{
-			if (true)
+			std::string::iterator it;
+			for (it = cell_type.begin(); it < cell_type.end(); it++)
 			{
-				std::string::iterator it;
-				for (it = cell_type.begin(); it < cell_type.end(); it++)
-				{
-					switch (*it) {
-						case '\\': /* FALL_THROUGH */
-						case '=': /* FALL_THROUGH */
-						case '\'': /* FALL_THROUGH */
-						case '$': instanceOf.append("_"); break;
-						default: instanceOf.append(1, *it); break;
-					}
+				switch (*it) {
+					case '\\': /* FALL_THROUGH */
+					case '=': /* FALL_THROUGH */
+					case '\'': /* FALL_THROUGH */
+					case '$': instanceOf.append("_"); break;
+					default: instanceOf.append(1, *it); break;
 				}
-//				std::replace(instanceOf.begin(), instanceOf.end(), '$', '_');
-			}
-			else
-			{
-				std::regex re( "[\\]", std::regex::extended );
-				std::vector<string> modParams = Tokenize(cell_type, re);
-				if (modParams.size() < 2)
-				{
-					log_error("Cannot determine parent module for %s\n", cell_type.c_str());
-					return;
-				}
-				instanceOf = modParams[1];
 			}
 		}
 		else
@@ -257,10 +242,6 @@ struct FirrtlWorker
 		if (instModule == NULL)
 		{
 			log_warning("No instance for %s.%s\n", cell_type.c_str(), cell_name.c_str());
-			for (auto p = cell->parameters.begin(); p != cell->parameters.end(); ++p) {
-				printf("%s\n", p->first.c_str());
-			}
-			instModule = design->module(cell->name);
 			return;
 		}
 		wire_exprs.push_back(stringf("%s" "inst %s%s of %s", indent.c_str(), cell_name.c_str(), cell_name_comment.c_str(), instanceOf.c_str()));
@@ -305,11 +286,9 @@ struct FirrtlWorker
 		string result = b_expr;
 		if (b_padded_width >= FIRRTL_MAX_DSH_WIDTH_ERROR) {
 			int max_shift_width_bits = FIRRTL_MAX_DSH_WIDTH_ERROR - 1;
-			if (true) {
-				string max_shift_string = stringf("UInt<%d>(%d)", max_shift_width_bits, (1<<max_shift_width_bits) - 1);
-				// Deal with the difference in semantics between FIRRTL and verilog
-				result = stringf("mux(gt(%s, %s), %s, bits(%s, %d, 0))", b_expr.c_str(), max_shift_string.c_str(), max_shift_string.c_str(), b_expr.c_str(), max_shift_width_bits - 1);
-			}
+			string max_shift_string = stringf("UInt<%d>(%d)", max_shift_width_bits, (1<<max_shift_width_bits) - 1);
+			// Deal with the difference in semantics between FIRRTL and verilog
+			result = stringf("mux(gt(%s, %s), %s, bits(%s, %d, 0))", b_expr.c_str(), max_shift_string.c_str(), max_shift_string.c_str(), b_expr.c_str(), max_shift_width_bits - 1);
 		}
 		return result;
 	}
@@ -411,7 +390,6 @@ struct FirrtlWorker
 				bool is_signed = cell->parameters.at("\\A_SIGNED").as_bool();
 				int y_width =  cell->parameters.at("\\Y_WIDTH").as_int();
 				string a_expr = make_expr(cell->getPort("\\A"));
-				int a_padded_width = cell->parameters.at("\\A_WIDTH").as_int();
 				string b_expr = make_expr(cell->getPort("\\B"));
 				int b_padded_width = cell->parameters.at("\\B_WIDTH").as_int();
 				wire_decls.push_back(stringf("    wire %s: UInt<%d>\n", y_id.c_str(), y_width));
@@ -426,28 +404,11 @@ struct FirrtlWorker
 					}
 					if (b_padded_width < y_width) {
 						auto b_sig = cell->getPort("\\B");
-						if (false && b_sig.is_fully_const()) {
-							std::regex uint_re( "Int<\\d+>");
-							string uint_width = stringf("Int<%d>", y_width);
-							b_expr = std::regex_replace(b_expr, uint_re, uint_width);
-						} else {
-							b_expr = stringf("pad(%s, %d)", b_expr.c_str(), y_width);
-						}
 						b_padded_width = y_width;
 					}
 				}
 
 				auto a_sig = cell->getPort("\\A");
-				if (false && a_padded_width < y_width) {
-					if (a_sig.is_fully_const()) {
-						std::regex uint_re( "Int<\\d+>");
-						string uint_width = stringf("Int<%d>", y_width);
-						a_expr = std::regex_replace(a_expr, uint_re, uint_width);
-					} else {
-						a_expr = stringf("pad(%s, %d)", a_expr.c_str(), y_width);
-					}
-					a_padded_width = y_width;
-				}
 
 				if (cell->parameters.at("\\A_SIGNED").as_bool()  & (cell->type == "$shr")) {
 					a_expr = "asUInt(" + a_expr + ")";
@@ -703,9 +664,6 @@ struct FirrtlWorker
 			// This may be a parameterized module - paramod.
 			if (cell->type.substr(0, 8) == "$paramod")
 			{
-				auto paramod_module = log_id(module);
-				auto paramod_instance = log_id(cell);
-				printf("paramod: %s.%s\n", paramod_module, paramod_instance);
 				process_instance(cell, wire_exprs);
 				continue;
 			}
@@ -762,10 +720,6 @@ struct FirrtlWorker
 				continue;
 			}
 			log_warning("Cell type not supported: %s (%s.%s)\n", log_id(cell->type), log_id(module), log_id(cell));
-			string mem_id = make_id(cell->name);
-			for (auto p = cell->parameters.begin(); p != cell->parameters.end(); ++p) {
-				printf("%s\n", p->first.c_str());
-			}
 		}
 
 		for (auto conn : module->connections())

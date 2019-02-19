@@ -1237,8 +1237,7 @@ RTLIL::SigSpec AstNode::genRTLIL(int width_hint, bool sign_hint)
 		}
 
 	// generate cells for binary operations: $add, $sub, $mul, $div, $mod
-	if (0) {
-		case AST_ADD: type_name = "$add"; }
+	if (0) { case AST_ADD: type_name = "$add"; }
 	if (0) { case AST_SUB: type_name = "$sub"; }
 	if (0) { case AST_MUL: type_name = "$mul"; }
 	if (0) { case AST_DIV: type_name = "$div"; }
