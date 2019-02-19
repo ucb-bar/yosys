@@ -3654,6 +3654,7 @@
 		072655A520F6867F006A5587 /* libreadline.7.0.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libreadline.7.0.dylib; path = ../../../../../../../../opt/local/lib/libreadline.7.0.dylib; sourceTree = "<group>"; };
 		072655A620F6867F006A5587 /* libtcl8.6.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libtcl8.6.dylib; path = ../../../../../../../../opt/local/lib/libtcl8.6.dylib; sourceTree = "<group>"; };
 		075BD0E920F817BB008C3557 /* version_8b92ddb9.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = version_8b92ddb9.cc; path = "../../../../../../../../../../Users/jrl/Library/Developer/Xcode/DerivedData/yosys-xc-cgopwczfcfflqbdhmmuvpudjuvyk/Build/Products/Debug/kernel/version_8b92ddb9.cc"; sourceTree = "<group>"; };
+		076E590E221C957400D15113 /* hierarchy.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = hierarchy.sh; sourceTree = "<group>"; };
 		077273CD215074E100DD4A0E /* extraUtilPath.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = extraUtilPath.c; sourceTree = "<group>"; };
 		077273CF2150754500DD4A0E /* dauCount.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = dauCount.c; sourceTree = "<group>"; };
 		077273D12150758F00DD4A0E /* extraUtilMaj.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = extraUtilMaj.c; sourceTree = "<group>"; };
@@ -4169,6 +4170,7 @@
 				0726335620F68263006A5587 /* muxcover.ys */,
 				0726335720F68263006A5587 /* run-test.sh */,
 				0726335820F68263006A5587 /* submod_extract.ys */,
+				076E590E221C957400D15113 /* hierarchy.sh */,
 			);
 			path = various;
 			sourceTree = "<group>";
