@@ -196,8 +196,7 @@ struct FirrtlWorker
 
 	std::string fid(RTLIL::IdString internal_id)
 	{
-		const char *str = internal_id.c_str();
-		return *str == '\\' ? str + 1 : str;
+		return make_id(internal_id);
 	}
 
 
