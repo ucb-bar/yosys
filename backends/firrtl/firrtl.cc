@@ -143,6 +143,13 @@ struct FirrtlWorker
 			reverse_wire_map[sig[i]] = make_pair(id, i);
 	}
 
+	void print_reverse_wire_map()
+	{
+		for (auto entry : reverse_wire_map) {
+			printf("%s -> %s:%d\n", log_signal(entry.first), entry.second.first.c_str(), entry.second.second);
+		}
+	}
+
 	FirrtlWorker(Module *module, std::ostream &f, RTLIL::Design *theDesign) : module(module), f(f), design(theDesign), indent("    ")
 	{
 	}
@@ -199,7 +206,6 @@ struct FirrtlWorker
 		return make_id(internal_id);
 	}
 
-
 	std::string cellname(RTLIL::Cell *cell)
 	{
 		return fid(cell->name).c_str();
@@ -249,29 +255,42 @@ struct FirrtlWorker
 			if (it->second.size() > 0) {
 				const SigSpec &secondSig = it->second;
 				const std::string firstName = cell_name + "." + make_id(it->first);
-				const std::string secondName = make_expr(secondSig);
+				const std::string secondExpr = make_expr(secondSig);
 				// Find the direction for this port.
 				FDirection dir = getPortFDirection(it->first, instModule);
-				std::string source, sink;
+				std::string sourceExpr, sinkExpr;
+				const SigSpec *sinkSig = nullptr;
 				switch (dir) {
 					case FD_INOUT:
 						log_warning("Instance port connection %s.%s is INOUT; treating as OUT\n", cell_type.c_str(), log_signal(it->second));
 					case FD_OUT:
-						source = firstName;
-						sink = secondName;
+						sourceExpr = firstName;
+						sinkExpr = secondExpr;
+						sinkSig = &secondSig;
 						break;
 					case FD_NODIRECTION:
 						log_warning("Instance port connection %s.%s is NODIRECTION; treating as IN\n", cell_type.c_str(), log_signal(it->second));
 						/* FALL_THROUGH */
 					case FD_IN:
-						source = secondName;
-						sink = firstName;
+						sourceExpr = secondExpr;
+						sinkExpr = firstName;
 						break;
 					default:
 						log_error("Instance port %s.%s unrecognized connection direction 0x%x !\n", cell_type.c_str(), log_signal(it->second), dir);
 						break;
 				}
-				wire_exprs.push_back(stringf("\n%s%s <= %s", indent.c_str(), sink.c_str(), source.c_str()));
+				// Check for subfield assignment.
+				std::string bitsString = "bits(";
+				if (sinkExpr.substr(0, bitsString.length()) == bitsString ) {
+					if (sinkSig == nullptr)
+						log_error("Unknown subfield %s.%s\n", cell_type.c_str(), sinkExpr.c_str());
+					// Don't generate the assignment here.
+					// Add the source and sink to the "reverse_wire_map" and we'll output the assignment
+					//  as part of the coalesced subfield assignments for this wire.
+					register_reverse_wire_map(sourceExpr, *sinkSig);
+				} else {
+					wire_exprs.push_back(stringf("\n%s%s <= %s", indent.c_str(), sinkExpr.c_str(), sourceExpr.c_str()));
+				}
 			}
 		}
 		wire_exprs.push_back(stringf("\n"));
@@ -731,6 +750,8 @@ struct FirrtlWorker
 			cell_exprs.push_back(stringf("    %s <= %s\n", y_id.c_str(), expr.c_str()));
 			register_reverse_wire_map(y_id, conn.first);
 		}
+
+//		print_reverse_wire_map();
 
 		for (auto wire : module->wires())
 		{
