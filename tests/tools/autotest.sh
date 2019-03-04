@@ -8,7 +8,7 @@ verbose=false
 keeprunning=false
 makejmode=false
 frontend="verilog"
-backend_opts="-noattr -noexpr"
+backend_opts="-noattr -noexpr -siminit"
 autotb_opts=""
 include_opts=""
 xinclude_opts=""
@@ -49,7 +49,7 @@ while getopts xmGl:wkjvref:s:p:n:S:I:-: opt; do
 		r)
 			backend_opts="$backend_opts -norename" ;;
 		e)
-			backend_opts="$( echo " $backend_opts " | sed 's, -noexpr ,,; s,^ ,,; s, $,,;'; )" ;;
+			backend_opts="$( echo " $backend_opts " | sed 's, -noexpr , ,; s,^ ,,; s, $,,;'; )" ;;
 		f)
 			frontend="$OPTARG" ;;
 		s)

@@ -1920,6 +1920,10 @@ struct VerificPass : public Pass {
 			// WARNING: instantiating unknown module 'XYZ' (VERI-1063)
 			Message::SetMessageType("VERI-1063", VERIFIC_ERROR);
 
+#ifndef DB_PRESERVE_INITIAL_VALUE
+#  warning Verific was built without DB_PRESERVE_INITIAL_VALUE.
+#endif
+
 			set_verific_global_flags = false;
 		}
 
@@ -2312,7 +2316,7 @@ struct ReadPass : public Pass {
 	}
 	void execute(std::vector<std::string> args, RTLIL::Design *design) YS_OVERRIDE
 	{
-		if (args.size() < 2)
+		if (args.size() < 2 || args[1][0] != '-')
 			log_cmd_error("Missing mode parameter.\n");
 
 		if (args.size() < 3)
