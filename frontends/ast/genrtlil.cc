@@ -1363,6 +1363,10 @@ RTLIL::SigSpec AstNode::genRTLIL(int width_hint, bool sign_hint)
 					log_file_error(filename, linenum, "Memory init with non-constant word count!\n");
 				num_words = int(children[2]->asInt(false));
 				cell->parameters["\\WORDS"] = RTLIL::Const(num_words);
+				// Does this node have the original file name as a 4th child?
+				if (children.size() > 3) {
+					cell->attributes["\\memfile"] = stringf("%s", children[3]->bitsAsConst().decode_string().c_str());
+				}
 			}
 
 			SigSpec addr_sig = children[0]->genRTLIL();

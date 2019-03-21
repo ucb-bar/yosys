@@ -2777,6 +2777,8 @@ AstNode *AstNode::readmem(bool is_readmemh, std::string mem_filename, AstNode *m
 					meminit->children.push_back(AstNode::mkconst_int(cursor, false));
 					meminit->children.push_back(nullptr);
 					meminit->children.push_back(nullptr);
+					// Save the filename for the FIRRTL backend.
+					meminit->children.push_back(AstNode::mkconst_str(mem_filename));
 					meminit->str = memory->str;
 					meminit->id2ast = memory;
 					meminit_bits.clear();
