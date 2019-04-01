@@ -180,6 +180,8 @@ struct FirrtlWorker
 	vector<pair <string, string>> &memoryInits;
 	std::string indent;
 
+	// Define read/write ports and memories.
+	// We'll collect their definitions and emit the corresponding FIRRTL definitions at the appropriate point in module construction.
 	struct read_port {
 		string name;
 		bool clk_enable;
@@ -208,7 +210,7 @@ struct FirrtlWorker
 	};
 	struct write_port : read_port {
 		RTLIL::SigSpec mask;
-		write_port(string name, bool clk_enable, bool clk_parity, bool transparent, RTLIL::SigSpec clk, RTLIL::SigSpec ena, RTLIL::SigSpec addr, RTLIL::SigSpec data) : read_port(name, clk_enable, clk_parity, transparent, clk, ena, addr), mask(mask) {
+		write_port(string name, bool clk_enable, bool clk_parity, bool transparent, RTLIL::SigSpec clk, RTLIL::SigSpec ena, RTLIL::SigSpec addr, RTLIL::SigSpec mask) : read_port(name, clk_enable, clk_parity, transparent, clk, ena, addr), mask(mask) {
 			if (!clk.is_fully_def())
 				this->clk = SigSpec(RTLIL::Const(0));
 			if (!ena.is_fully_def())
@@ -216,7 +218,7 @@ struct FirrtlWorker
 			if (!mask.is_fully_def())
 				this->ena = SigSpec(RTLIL::Const(1));
 		}
-		string gen_read(const char * indent) {
+		string gen_read(const char * /* indent */) {
 			log_error("gen_read called on write_port: %s\n", name.c_str());
 			return stringf("gen_read called on write_port: %s\n", name.c_str());
 		}
@@ -738,12 +740,8 @@ struct FirrtlWorker
 				if (offset != 0)
 					log_error("Memory with nonzero offset: %s.%s\n", log_id(module), log_id(cell));
 
-//				cell_exprs.push_back(stringf("    mem %s:\n", mem_id.c_str()));
-//				cell_exprs.push_back(stringf("      data-type => UInt<%d>\n", width));
-//				cell_exprs.push_back(stringf("      depth => %d\n", size));
-
-				for (int i = 0; i < rd_ports; i++) {
-//					cell_exprs.push_back(stringf("      reader => r%d\n", i));
+				for (int i = 0; i < rd_ports; i++)
+				{
 					if (rd_clk_enable[i] != State::S0)
 						log_error("Clocked read port %d on memory %s.%s.\n", i, log_id(module), log_id(cell));
 					SigSpec addr_sig = cell->getPort("\\RD_ADDR").extract(i*abits, abits);
@@ -799,26 +797,9 @@ struct FirrtlWorker
 
 			if (cell->type.in("$memwr", "$memrd", "$meminit"))
 			{
-				//				cell->parameters["\\MEMID"] = memory->name.str();
-				//				cell->parameters["\\CLK_ENABLE"] = false;
-				//				cell->parameters["\\CLK_POLARITY"] = true;
-				//				cell->parameters["\\PRIORITY"] = 0;
-				//				cell->parameters["\\ABITS"] = GetSize(addr);
-				//				cell->parameters["\\WIDTH"] = GetSize(data);
-				//				cell->setPort("\\EN", RTLIL::SigSpec(net_map_at(inst->GetControl())).repeat(GetSize(data)));
-				//				cell->setPort("\\CLK", RTLIL::State::S0);
-				//				cell->setPort("\\ADDR", addr);
-				//				cell->setPort("\\DATA", data);
-				//
-				//				if (inst->Type() == OPER_CLOCKED_WRITE_PORT) {
-				//					cell->parameters["\\CLK_ENABLE"] = true;
-				//					cell->setPort("\\CLK", net_map_at(inst->GetClock()));
-				//				}
 				std::string cell_type = fid(cell->type);
-//				string mem_id = make_id(cell->name);
 				std::string mem_id = make_id(cell->parameters["\\MEMID"].decode_string());
-//				string mem_id = cell->name.str();
-				printCell(cell);
+//				printCell(cell);
 				int abits = cell->parameters.at("\\ABITS").as_int();
 				int width = cell->parameters.at("\\WIDTH").as_int();
 				memory *mp = nullptr;
@@ -853,13 +834,13 @@ struct FirrtlWorker
 					bool transparency = false;
 					string data_expr = make_expr(dataSig);
 					if (cell->type.in("$memwr")) {
-						portNum = mp->write_ports.size();
+						portNum = (int) mp->write_ports.size();
 						write_port wp(stringf("%s.w%d", mem_id.c_str(), portNum), clk_enable.as_bool(), clk_polarity.as_bool(),  transparency, clockSig, enableSig, addrSig, dataSig);
 						mp->add_memory_write_port(wp);
 						cell_exprs.push_back(stringf("%s%s.data <= %s\n", indent.c_str(), wp.name.c_str(), data_expr.c_str()));
 						cell_exprs.push_back(wp.gen_write(indent.c_str()));
 					} else if (cell->type.in("$memrd")) {
-						portNum = mp->read_ports.size();
+						portNum = (int) mp->read_ports.size();
 						read_port rp(stringf("%s.r%d", mem_id.c_str(), portNum), clk_enable.as_bool(), clk_polarity.as_bool(),  transparency, clockSig, enableSig, addrSig);
 						mp->add_memory_read_port(rp);
 						cell_exprs.push_back(rp.gen_read(indent.c_str()));
@@ -1051,10 +1032,10 @@ struct FirrtlWorker
 			f << stringf("    mem %s:\n", m.name.c_str());
 			f << stringf("      data-type => UInt<%d>\n", m.width);
 			f << stringf("      depth => %d\n", m.size);
-			for (int i = 0; i < m.read_ports.size(); i += 1) {
+			for (int i = 0; i < (int) m.read_ports.size(); i += 1) {
 				f << stringf("      reader => r%d\n", i);
 			}
-			for (int i = 0; i < m.write_ports.size(); i += 1) {
+			for (int i = 0; i < (int) m.write_ports.size(); i += 1) {
 				f << stringf("      writer => w%d\n", i);
 			}
 			f << stringf("      read-latency => %d\n", m.read_latency);
