@@ -2794,8 +2794,9 @@ AstNode *AstNode::readmem(bool is_readmemh, std::string mem_filename, AstNode *m
 					meminit->children.push_back(AstNode::mkconst_int(cursor, false));
 					meminit->children.push_back(nullptr);
 					meminit->children.push_back(nullptr);
-					// Save the filename for the FIRRTL backend.
-					meminit->children.push_back(AstNode::mkconst_str(mem_filename));
+					// Leave slots for the type and the filename for the FIRRTL backend.
+					meminit->children.push_back(nullptr);
+					meminit->children.push_back(nullptr);
 					meminit->str = memory->str;
 					meminit->id2ast = memory;
 					meminit_bits.clear();
@@ -2830,6 +2831,9 @@ AstNode *AstNode::readmem(bool is_readmemh, std::string mem_filename, AstNode *m
 	if (meminit != nullptr) {
 		meminit->children[1] = AstNode::mkconst_bits(meminit_bits, false);
 		meminit->children[2] = AstNode::mkconst_int(meminit_size, false);
+		// Add the type and the filename for the FIRRTL backend.
+		meminit->children[3] = AstNode::mkconst_str(mem_filename);
+		meminit->children[4] = AstNode::mkconst_int(is_readmemh, false, 1);
 	}
 
 	return block;

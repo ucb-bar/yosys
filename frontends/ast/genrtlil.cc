@@ -1377,8 +1377,14 @@ RTLIL::SigSpec AstNode::genRTLIL(int width_hint, bool sign_hint)
 				num_words = int(children[2]->asInt(false));
 				cell->parameters["\\WORDS"] = RTLIL::Const(num_words);
 				// Does this node have the original file name as a 4th child?
-				if (children.size() > 3) {
-					cell->attributes["\\memfile"] = stringf("%s", children[3]->bitsAsConst().decode_string().c_str());
+				const int Cmemfile = 3;
+				if (children.size() > Cmemfile) {
+					cell->attributes["\\memfile"] = stringf("%s", children[Cmemfile]->bitsAsConst().decode_string().c_str());
+				}
+				const int Cmemtype = 4;
+				// Does this node have the original file type as a 5th child?
+				if (children.size() > Cmemtype) {
+					cell->attributes["\\memfiletype"] = stringf("%c", children[Cmemtype]->asBool() ? 'h' : 'b');
 				}
 			}
 

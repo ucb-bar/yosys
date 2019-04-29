@@ -182,6 +182,8 @@ struct FirrtlWorker
 
 	// Define read/write ports and memories.
 	// We'll collect their definitions and emit the corresponding FIRRTL definitions at the appropriate point in module construction.
+	// For the moment, we don't handle $readmemh or $readmemb.
+	// These will be part of a subsequent PR.
 	struct read_port {
 		string name;
 		bool clk_enable;
@@ -744,6 +746,7 @@ struct FirrtlWorker
 				{
 					if (rd_clk_enable[i] != State::S0)
 						log_error("Clocked read port %d on memory %s.%s.\n", i, log_id(module), log_id(cell));
+
 					SigSpec addr_sig = cell->getPort("\\RD_ADDR").extract(i*abits, abits);
 					SigSpec data_sig = cell->getPort("\\RD_DATA").extract(i*width, width);
 					string addr_expr = make_expr(addr_sig);
