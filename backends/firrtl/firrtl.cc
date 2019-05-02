@@ -238,7 +238,7 @@ struct FirrtlWorker
 	};
 	/* Memories defined within this module. */
 	struct memory {
-		Cell *pCell;
+		Cell *pCell;					// for error reporting
 		string name;					// memory name
 		int abits;						// number of address bits
 		int size;						// size (in units) of the memory
@@ -268,6 +268,9 @@ struct FirrtlWorker
 				log_error("Memory %s has zero width%s\n", this->name.c_str(), this->atLine());
 			}
 		 }
+		// We need a default constructor for the dict insert.
+	   memory() : pCell(0), read_latency(0), write_latency(1), init_file(""), init_file_srcFileSpec(""){}
+
 		const char *atLine() {
 			if (srcLine == "") {
 				if (pCell) {
@@ -289,11 +292,11 @@ struct FirrtlWorker
 		}
 
 	};
-	dict<string, memory*> memories;
+	dict<string, memory> memories;
 
-	void register_memory(memory * mp)
+	void register_memory(memory &m)
 	{
-		memories[mp->name] = mp;
+		memories[m.name] = m;
 	}
 
 	void printParams(Cell * cell) {
@@ -821,7 +824,7 @@ struct FirrtlWorker
 					cell_exprs.push_back(stringf("%s%s.data <= %s\n", indent.c_str(), name.c_str(), data_expr.c_str()));
 					cell_exprs.push_back(wp.gen_write(indent.c_str()));
 				}
-				register_memory(&m);
+				register_memory(m);
 				continue;
 			}
 
@@ -839,9 +842,9 @@ struct FirrtlWorker
 					// Do we already have an entry for this memory?
 					if (memories.count(mem_id) == 0) {
 						memory m(cell, mem_id, ceil_log2(nWords), nWords, width);
-						register_memory(&m);
+						register_memory(m);
 					}
-					mp = memories.at(mem_id);
+					mp = &memories.at(mem_id);
 					// Do we have a memory file attribute?
 					if (cell->attributes.count("\\memfile") > 0) {
 						std::string memoryFile = cell->attributes.at("\\memfile").decode_string();
@@ -862,9 +865,9 @@ struct FirrtlWorker
 					// Do we already have an entry for this memory?
 					if (memories.count(mem_id) == 0) {
 						memory m(cell, mem_id, abits, 0, width);
-						register_memory(&m);
+						register_memory(m);
 					}
-					mp = memories.at(mem_id);
+					mp = &memories.at(mem_id);
 					int portNum = 0;
 					bool transparency = false;
 					string data_expr = make_expr(dataSig);
@@ -1063,7 +1066,7 @@ struct FirrtlWorker
 
 		// If we have any memory definitions, output them.
 		for (auto kv : memories) {
-			memory m = *kv.second;
+			memory &m = kv.second;
 			f << stringf("    mem %s:\n", m.name.c_str());
 			f << stringf("      data-type => UInt<%d>\n", m.width);
 			f << stringf("      depth => %d\n", m.size);
