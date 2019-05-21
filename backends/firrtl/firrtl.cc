@@ -569,8 +569,11 @@ struct FirrtlWorker
 				string primop;
 				bool always_uint = false;
 				if (cell->type == "$not") primop = "not";
-				else if (cell->type == "$neg") primop = "neg";
-				else if (cell->type == "$logic_not") {
+				else if (cell->type == "$neg") {
+//					printCell(cell);
+					primop = "neg";
+					is_signed = true;	// Result of "neg" is signed (an SInt).
+				} else if (cell->type == "$logic_not") {
                                         primop = "eq";
                                         a_expr = stringf("%s, UInt(0)", a_expr.c_str());
                                 }
@@ -682,6 +685,7 @@ struct FirrtlWorker
 					auto b_sig = cell->getPort("\\B");
 					if (b_sig.is_fully_const()) {
 						primop = "shl";
+						b_expr = std::to_string(b_sig.as_int());
 					} else {
 						primop = "dshl";
 						// Convert from FIRRTL left shift semantics.
@@ -695,6 +699,7 @@ struct FirrtlWorker
 					auto b_sig = cell->getPort("\\B");
 					if (b_sig.is_fully_const()) {
 						primop = "shr";
+						b_expr = std::to_string(b_sig.as_int());
 					} else {
 						primop = "dshr";
 					}
@@ -832,7 +837,7 @@ struct FirrtlWorker
 			{
 				std::string cell_type = fid(cell->type);
 				std::string mem_id = make_id(cell->parameters["\\MEMID"].decode_string());
-				printCell(cell);
+//				printCell(cell);
 				int abits = cell->parameters.at("\\ABITS").as_int();
 				int width = cell->parameters.at("\\WIDTH").as_int();
 				memory *mp = nullptr;
@@ -965,6 +970,18 @@ struct FirrtlWorker
 				register_reverse_wire_map(y_id, cell->getPort("\\Y"));
 				continue;
 			}
+			if (cell->type == "$pos") {
+				// assign y = a;
+//				printCell(cell);
+				string y_id = make_id(cell->name);
+				int y_width =  cell->parameters.at("\\Y_WIDTH").as_int();
+				string a_expr = make_expr(cell->getPort("\\A"));
+				wire_decls.push_back(stringf("    wire %s: UInt<%d>\n", y_id.c_str(), y_width));
+				cell_exprs.push_back(stringf("    %s <= %s\n", y_id.c_str(), a_expr.c_str()));
+				register_reverse_wire_map(y_id, cell->getPort("\\Y"));
+				continue;
+			}
+			printCell(cell);
 			log_warning("Cell type not supported: %s (%s.%s)\n", log_id(cell->type), log_id(module), log_id(cell));
 		}
 

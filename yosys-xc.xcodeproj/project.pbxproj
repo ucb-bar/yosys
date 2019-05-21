@@ -1324,6 +1324,9 @@
 		0726559920F6827B006A5587 /* subcircuit.cc in Sources */ = {isa = PBXBuildFile; fileRef = 0726467620F6826B006A5587 /* subcircuit.cc */; };
 		072655A720F6867F006A5587 /* libffi.6.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 072655A420F6867E006A5587 /* libffi.6.dylib */; };
 		072655A920F6867F006A5587 /* libtcl8.6.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 072655A620F6867F006A5587 /* libtcl8.6.dylib */; };
+		0732C6C02282409B00629111 /* abcRunGen.c in Sources */ = {isa = PBXBuildFile; fileRef = 0732C6BF2282409B00629111 /* abcRunGen.c */; };
+		0732C6C2228240C100629111 /* extraUtilCfs.c in Sources */ = {isa = PBXBuildFile; fileRef = 0732C6C1228240C100629111 /* extraUtilCfs.c */; };
+		0732C6C4228240ED00629111 /* extraUtilGen.c in Sources */ = {isa = PBXBuildFile; fileRef = 0732C6C3228240ED00629111 /* extraUtilGen.c */; };
 		075BD0EA20F817BB008C3557 /* version_8b92ddb9.cc in Sources */ = {isa = PBXBuildFile; fileRef = 075BD0E920F817BB008C3557 /* version_8b92ddb9.cc */; };
 		077273CE215074E200DD4A0E /* extraUtilPath.c in Sources */ = {isa = PBXBuildFile; fileRef = 077273CD215074E100DD4A0E /* extraUtilPath.c */; };
 		077273D02150754500DD4A0E /* dauCount.c in Sources */ = {isa = PBXBuildFile; fileRef = 077273CF2150754500DD4A0E /* dauCount.c */; };
@@ -3653,6 +3656,9 @@
 		072655A420F6867E006A5587 /* libffi.6.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libffi.6.dylib; path = ../../../../../../../../opt/local/lib/libffi.6.dylib; sourceTree = "<group>"; };
 		072655A520F6867F006A5587 /* libreadline.7.0.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libreadline.7.0.dylib; path = ../../../../../../../../opt/local/lib/libreadline.7.0.dylib; sourceTree = "<group>"; };
 		072655A620F6867F006A5587 /* libtcl8.6.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libtcl8.6.dylib; path = ../../../../../../../../opt/local/lib/libtcl8.6.dylib; sourceTree = "<group>"; };
+		0732C6BF2282409B00629111 /* abcRunGen.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = abcRunGen.c; path = ../../../../../abc/src/base/abci/abcRunGen.c; sourceTree = "<group>"; };
+		0732C6C1228240C100629111 /* extraUtilCfs.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = extraUtilCfs.c; path = ../../../../../abc/src/misc/extra/extraUtilCfs.c; sourceTree = "<group>"; };
+		0732C6C3228240ED00629111 /* extraUtilGen.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = extraUtilGen.c; path = ../../../../../abc/src/misc/extra/extraUtilGen.c; sourceTree = "<group>"; };
 		075BD0E920F817BB008C3557 /* version_8b92ddb9.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = version_8b92ddb9.cc; path = "../../../../../../../../../../Users/jrl/Library/Developer/Xcode/DerivedData/yosys-xc-cgopwczfcfflqbdhmmuvpudjuvyk/Build/Products/Debug/kernel/version_8b92ddb9.cc"; sourceTree = "<group>"; };
 		076E590E221C957400D15113 /* hierarchy.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = hierarchy.sh; sourceTree = "<group>"; };
 		077273CD215074E100DD4A0E /* extraUtilPath.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = extraUtilPath.c; sourceTree = "<group>"; };
@@ -4883,6 +4889,7 @@
 		072636FE20F68265006A5587 /* abci */ = {
 			isa = PBXGroup;
 			children = (
+				0732C6BF2282409B00629111 /* abcRunGen.c */,
 				072636FF20F68265006A5587 /* abc.c */,
 				0726370220F68265006A5587 /* abcAttach.c */,
 				0726370520F68265006A5587 /* abcAuto.c */,
@@ -5822,6 +5829,8 @@
 		07263D3D20F68266006A5587 /* extra */ = {
 			isa = PBXGroup;
 			children = (
+				0732C6C3228240ED00629111 /* extraUtilGen.c */,
+				0732C6C1228240C100629111 /* extraUtilCfs.c */,
 				077273D12150758F00DD4A0E /* extraUtilMaj.c */,
 				077273CD215074E100DD4A0E /* extraUtilPath.c */,
 				07263D3E20F68266006A5587 /* extra.h */,
@@ -7873,6 +7882,7 @@
 				072650B820F68273006A5587 /* dsc.c in Sources */,
 				07264BFF20F6826E006A5587 /* verParse.c in Sources */,
 				072649AC20F6826D006A5587 /* abcBarBuf.c in Sources */,
+				0732C6C02282409B00629111 /* abcRunGen.c in Sources */,
 				072652D320F68276006A5587 /* fraCec.c in Sources */,
 				07264BFC20F6826E006A5587 /* verFormula.c in Sources */,
 				07264AD320F6826D006A5587 /* abcVerify.c in Sources */,
@@ -8205,6 +8215,7 @@
 				0726513A20F68274006A5587 /* mfs_.c in Sources */,
 				0726511220F68274006A5587 /* lpkMap.c in Sources */,
 				0726552D20F6827A006A5587 /* wreduce.cc in Sources */,
+				0732C6C4228240ED00629111 /* extraUtilGen.c in Sources */,
 				07264C6720F6826F006A5587 /* cuddAddNeg.c in Sources */,
 				07264B7820F6826E006A5587 /* ioReadBblif.c in Sources */,
 				07264F0B20F68271006A5587 /* scl.c in Sources */,
@@ -8585,6 +8596,7 @@
 				07264DEA20F68270006A5587 /* luckyFast6.c in Sources */,
 				0726479520F6826C006A5587 /* aigOper.c in Sources */,
 				07264EBB20F68271006A5587 /* mapperSuper.c in Sources */,
+				0732C6C2228240C100629111 /* extraUtilCfs.c in Sources */,
 				07264BD920F6826E006A5587 /* mainReal.c in Sources */,
 				0726550B20F6827A006A5587 /* fsm.cc in Sources */,
 				0726530720F68277006A5587 /* fraigCanon.c in Sources */,
