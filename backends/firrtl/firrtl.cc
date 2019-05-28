@@ -571,7 +571,6 @@ struct FirrtlWorker
 				bool always_uint = false;
 				if (cell->type == "$not") primop = "not";
 				else if (cell->type == "$neg") {
-//					printCell(cell);
 					primop = "neg";
 					is_signed = true;	// Result of "neg" is signed (an SInt).
 				} else if (cell->type == "$logic_not") {
