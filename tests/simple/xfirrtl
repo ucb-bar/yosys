@@ -24,4 +24,5 @@ subbytes.v	$adff
 task_func.v	drops modules
 values.v	combinational loop
 vloghammer.v	combinational loop
+wandwor.v	Invalid connect to an expression that is not a reference or a WritePort
 wreduce.v	original verilog issues ( -x where x isn't declared signed)
