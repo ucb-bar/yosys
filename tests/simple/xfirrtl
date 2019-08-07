@@ -14,7 +14,6 @@ memory.v	$adff
 multiplier.v	inst id[0] of
 muxtree.v	drops modules
 omsp_dbg_uart.v	$adff
-operators.v	$pow
 partsel.v	drops modules
 process.v	drops modules
 realexpr.v	drops modules
@@ -25,6 +24,7 @@ specify.v	no code (empty module generates error
 subbytes.v	$adff
 task_func.v	drops modules
 values.v	combinational loop
+wandwor.v	Invalid connect to an expression that is not a reference or a WritePort.
 vloghammer.v	combinational loop
 wandwor.v	Invalid connect to an expression that is not a reference or a WritePort
 wreduce.v	original verilog issues ( -x where x isn't declared signed)
