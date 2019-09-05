@@ -63,20 +63,32 @@ struct SynthXilinxPass : public ScriptPass
 		log("        generate an output netlist (and BLIF file) suitable for VPR\n");
 		log("        (this feature is experimental and incomplete)\n");
 		log("\n");
-		log("    -nobram\n");
-		log("        disable inference of block rams\n");
+		log("    -ise\n");
+		log("        generate an output netlist suitable for ISE (enables -iopad)\n");
 		log("\n");
-		log("    -nodram\n");
-		log("        disable inference of distributed rams\n");
+		log("    -nobram\n");
+		log("        do not use block RAM cells in output netlist\n");
+		log("\n");
+		log("    -nolutram\n");
+		log("        do not use distributed RAM cells in output netlist\n");
 		log("\n");
 		log("    -nosrl\n");
-		log("        disable inference of shift registers\n");
+		log("        do not use distributed SRL cells in output netlist\n");
 		log("\n");
 		log("    -nocarry\n");
 		log("        do not use XORCY/MUXCY/CARRY4 cells in output netlist\n");
 		log("\n");
 		log("    -nowidelut\n");
 		log("        do not use MUXF[78] resources to implement LUTs larger than LUT6s\n");
+		log("\n");
+		log("    -iopad\n");
+		log("        enable I/O buffer insertion (selected automatically by -ise)\n");
+		log("\n");
+		log("    -noiopad\n");
+		log("        disable I/O buffer insertion (only useful with -ise)\n");
+		log("\n");
+		log("    -noclkbuf\n");
+		log("        disable automatic clock buffer insertion\n");
 		log("\n");
 		log("    -widemux <int>\n");
 		log("        enable inference of hard multiplexer resources (MUXF[78]) for muxes at or\n");
@@ -104,7 +116,8 @@ struct SynthXilinxPass : public ScriptPass
 	}
 
 	std::string top_opt, edif_file, blif_file, family;
-	bool flatten, retime, vpr, nobram, nodram, nosrl, nocarry, nowidelut, abc9;
+	bool flatten, retime, vpr, ise, iopad, noiopad, noclkbuf, nobram, nolutram, nosrl, nocarry, nowidelut, abc9;
+	bool flatten_before_abc;
 	int widemux;
 
 	void clear_flags() YS_OVERRIDE
@@ -116,13 +129,18 @@ struct SynthXilinxPass : public ScriptPass
 		flatten = false;
 		retime = false;
 		vpr = false;
+		ise = false;
+		iopad = false;
+		noiopad = false;
+		noclkbuf = false;
 		nocarry = false;
 		nobram = false;
-		nodram = false;
+		nolutram = false;
 		nosrl = false;
 		nocarry = false;
 		nowidelut = false;
 		abc9 = false;
+		flatten_before_abc = false;
 		widemux = 0;
 	}
 
@@ -162,6 +180,10 @@ struct SynthXilinxPass : public ScriptPass
 				flatten = true;
 				continue;
 			}
+			if (args[argidx] == "-flatten_before_abc") {
+				flatten_before_abc = true;
+				continue;
+			}
 			if (args[argidx] == "-retime") {
 				retime = true;
 				continue;
@@ -178,6 +200,22 @@ struct SynthXilinxPass : public ScriptPass
 				vpr = true;
 				continue;
 			}
+			if (args[argidx] == "-ise") {
+				ise = true;
+				continue;
+			}
+			if (args[argidx] == "-iopad") {
+				iopad = true;
+				continue;
+			}
+			if (args[argidx] == "-noiopad") {
+				noiopad = true;
+				continue;
+			}
+			if (args[argidx] == "-noclkbuf") {
+				noclkbuf = true;
+				continue;
+			}
 			if (args[argidx] == "-nocarry") {
 				nocarry = true;
 				continue;
@@ -186,8 +224,8 @@ struct SynthXilinxPass : public ScriptPass
 				nobram = true;
 				continue;
 			}
-			if (args[argidx] == "-nodram") {
-				nodram = true;
+			if (args[argidx] == "-nolutram" || /*deprecated alias*/ args[argidx] == "-nodram") {
+				nolutram = true;
 				continue;
 			}
 			if (args[argidx] == "-nosrl") {
@@ -230,9 +268,9 @@ struct SynthXilinxPass : public ScriptPass
 	{
 		if (check_label("begin")) {
 			if (vpr)
-				run("read_verilog -lib -icells -D _ABC -D_EXPLICIT_CARRY +/xilinx/cells_sim.v");
+				run("read_verilog -lib -D_EXPLICIT_CARRY +/xilinx/cells_sim.v");
 			else
-				run("read_verilog -lib -icells -D _ABC +/xilinx/cells_sim.v");
+				run("read_verilog -lib +/xilinx/cells_sim.v");
 
 			run("read_verilog -lib +/xilinx/cells_xtra.v");
 
@@ -265,9 +303,8 @@ struct SynthXilinxPass : public ScriptPass
 			if (widemux > 0 || help_mode)
 				run("muxpack", "    ('-widemux' only)");
 
-			// shregmap -tech xilinx can cope with $shiftx and $mux
-			//   cells for identifying variable-length shift registers,
-			//   so attempt to convert $pmux-es to the former
+			// xilinx_srl looks for $shiftx cells for identifying variable-length
+			//   shift registers, so attempt to convert $pmux-es to this
 			// Also: wide multiplexer inference benefits from this too
 			if (!(nosrl && widemux == 0) || help_mode) {
 				run("pmux2shiftx", "(skip if '-nosrl' and '-widemux=0')");
@@ -284,7 +321,7 @@ struct SynthXilinxPass : public ScriptPass
 			run("opt_clean");
 		}
 
-		if (check_label("bram", "(skip if '-nobram')")) {
+		if (check_label("map_bram", "(skip if '-nobram')")) {
 			if (help_mode) {
 				run("memory_bram -rules +/xilinx/{family}_brams.txt");
 				run("techmap -map +/xilinx/{family}_brams_map.v");
@@ -301,20 +338,23 @@ struct SynthXilinxPass : public ScriptPass
 			}
 		}
 
-		if (check_label("dram", "(skip if '-nodram')")) {
-			if (!nodram || help_mode) {
-				run("memory_bram -rules +/xilinx/drams.txt");
-				run("techmap -map +/xilinx/drams_map.v");
+		if (check_label("map_lutram", "(skip if '-nolutram')")) {
+			if (!nolutram || help_mode) {
+				run("memory_bram -rules +/xilinx/lutrams.txt");
+				run("techmap -map +/xilinx/lutrams_map.v");
 			}
 		}
 
-		if (check_label("fine")) {
+		if (check_label("map_ffram")) {
 			if (widemux > 0)
 				run("opt -fast -mux_bool -undriven -fine"); // Necessary to omit -mux_undef otherwise muxcover
 									    // performs less efficiently
 			else
 				run("opt -fast -full");
 			run("memory_map");
+		}
+
+		if (check_label("fine")) {
 			run("dffsr2dff");
 			run("dff2dffe");
 			if (help_mode) {
@@ -346,13 +386,8 @@ struct SynthXilinxPass : public ScriptPass
 			}
 			run("opt -full");
 
-			if (!nosrl || help_mode) {
-				// shregmap operates on bit-level flops, not word-level,
-				//   so break those down here
-				run("simplemap t:$dff t:$dffe", "       (skip if '-nosrl')");
-				// shregmap with '-tech xilinx' infers variable length shift regs
-				run("shregmap -tech xilinx -minlen 3", "(skip if '-nosrl')");
-			}
+			if (!nosrl || help_mode)
+				run("xilinx_srl -variable -minlen 3", "(skip if '-nosrl')");
 
 			std::string techmap_args = " -map +/techmap.v";
 			if (help_mode)
@@ -373,20 +408,32 @@ struct SynthXilinxPass : public ScriptPass
 		}
 
 		if (check_label("map_cells")) {
-			std::string techmap_args = "-map +/techmap.v -D _ABC -map +/xilinx/cells_map.v";
+			std::string techmap_args = "-map +/techmap.v -map +/xilinx/cells_map.v";
 			if (widemux > 0)
 				techmap_args += stringf(" -D MIN_MUX_INPUTS=%d", widemux);
 			run("techmap " + techmap_args);
 			run("clean");
 		}
 
+		if (check_label("map_ffs")) {
+				if (abc9 || help_mode) {
+						run("techmap -map +/xilinx/ff_map.v", "('-abc9' only)");
+						run("dffinit -ff FDRE Q INIT -ff FDCE Q INIT -ff FDPE Q INIT -ff FDSE Q INIT "
+										"-ff FDRE_1 Q INIT -ff FDCE_1 Q INIT -ff FDPE_1 Q INIT -ff FDSE_1 Q INIT", "('-abc9' only)");
+				}
+		}
+
 		if (check_label("map_luts")) {
 			run("opt_expr -mux_undef");
+			if (flatten_before_abc)
+				run("flatten");
 			if (help_mode)
-				run("abc -luts 2:2,3,6:5[,10,20] [-dff]", "(option for 'nowidelut', option for '-retime')");
+				run("abc -luts 2:2,3,6:5[,10,20] [-dff]", "(option for 'nowidelut'; option for '-retime')");
 			else if (abc9) {
 				if (family != "xc7")
 					log_warning("'synth_xilinx -abc9' currently supports '-family xc7' only.\n");
+				run("techmap -map +/xilinx/abc_map.v -max_iter 1");
+				run("read_verilog -icells -lib +/xilinx/abc_model.v");
 				if (nowidelut)
 					run("abc9 -lut +/xilinx/abc_xc7_nowide.lut -box +/xilinx/abc_xc7.box -W " + std::to_string(XC7_WIRE_DELAY));
 				else
@@ -403,11 +450,31 @@ struct SynthXilinxPass : public ScriptPass
 			// This shregmap call infers fixed length shift registers after abc
 			//   has performed any necessary retiming
 			if (!nosrl || help_mode)
-				run("shregmap -minlen 3 -init -params -enpol any_or_none", "(skip if '-nosrl')");
-			run("techmap -map +/xilinx/lut_map.v -map +/xilinx/ff_map.v -map +/xilinx/cells_map.v");
-			run("dffinit -ff FDRE Q INIT -ff FDCE Q INIT -ff FDPE Q INIT -ff FDSE Q INIT "
-					"-ff FDRE_1 Q INIT -ff FDCE_1 Q INIT -ff FDPE_1 Q INIT -ff FDSE_1 Q INIT");
+				run("xilinx_srl -fixed -minlen 3", "(skip if '-nosrl')");
+			std::string techmap_args = "-map +/xilinx/lut_map.v -map +/xilinx/cells_map.v";
+			if (help_mode)
+				techmap_args += " [-map +/xilinx/ff_map.v]";
+			else if (abc9)
+				techmap_args += " -map +/xilinx/abc_unmap.v";
+			else
+				techmap_args += " -map +/xilinx/ff_map.v";
+			run("techmap " + techmap_args);
+			if (!abc9 || help_mode)
+				run("dffinit -ff FDRE Q INIT -ff FDCE Q INIT -ff FDPE Q INIT -ff FDSE Q INIT "
+						"-ff FDRE_1 Q INIT -ff FDCE_1 Q INIT -ff FDPE_1 Q INIT -ff FDSE_1 Q INIT", "(without '-abc9' only)");
 			run("clean");
+		}
+
+		if (check_label("finalize")) {
+			bool do_iopad = iopad || (ise && !noiopad);
+			if (help_mode || !noclkbuf) {
+				if (help_mode || do_iopad)
+					run("clkbufmap -buf BUFG O:I -inpad IBUFG O:I", "(skip if '-noclkbuf', '-inpad' passed if '-iopad' or '-ise' and not '-noiopad')");
+				else
+					run("clkbufmap -buf BUFG O:I");
+			}
+			if (do_iopad)
+				run("iopadmap -bits -outpad OBUF I:O -inpad IBUF O:I A:top", "(only if '-iopad' or '-ise' and not '-noiopad')");
 		}
 
 		if (check_label("check")) {
