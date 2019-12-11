@@ -188,9 +188,9 @@ YOSYS_NAMESPACE_END
 "unique0"      { SV_KEYWORD(TOK_UNIQUE); }
 "priority"     { SV_KEYWORD(TOK_PRIORITY); }
 
-"always_comb"  { SV_KEYWORD(TOK_ALWAYS); }
-"always_ff"    { SV_KEYWORD(TOK_ALWAYS); }
-"always_latch" { SV_KEYWORD(TOK_ALWAYS); }
+"always_comb"  { SV_KEYWORD(TOK_ALWAYS_COMB); }
+"always_ff"    { SV_KEYWORD(TOK_ALWAYS_FF); }
+"always_latch" { SV_KEYWORD(TOK_ALWAYS_LATCH); }
 
  /* use special token for labels on assert, assume, cover, and restrict because it's insanley complex
     to fix parsing of cells otherwise. (the current cell parser forces a reduce very early to update some
@@ -239,7 +239,7 @@ YOSYS_NAMESPACE_END
 	return TOK_CONSTVAL;
 }
 
-[0-9]*[ \t]*\'s?[bodhBODH]*[ \t\r\n]*[0-9a-fA-FzxZX?_]+ {
+[0-9]*[ \t]*\'[sS]?[bodhBODH]?[ \t\r\n]*[0-9a-fA-FzxZX?_]+ {
 	frontend_verilog_yylval.string = new std::string(yytext);
 	return TOK_CONSTVAL;
 }

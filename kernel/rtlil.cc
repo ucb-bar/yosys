@@ -783,6 +783,14 @@ namespace {
 			return v;
 		}
 
+		int param_bool(RTLIL::IdString name, bool expected)
+		{
+			int v = param_bool(name);
+			if (v != expected)
+				error(__LINE__);
+			return v;
+		}
+
 		void param_bits(RTLIL::IdString name, int width)
 		{
 			param(name);
@@ -869,13 +877,23 @@ namespace {
 				return;
 			}
 
-			if (cell->type.in(ID($shl), ID($shr), ID($sshl), ID($sshr), ID($shift), ID($shiftx))) {
+			if (cell->type.in(ID($shl), ID($shr), ID($sshl), ID($sshr))) {
+				param_bool(ID(A_SIGNED));
+				param_bool(ID(B_SIGNED), /*expected=*/false);
+				port(ID::A, param(ID(A_WIDTH)));
+				port(ID::B, param(ID(B_WIDTH)));
+				port(ID::Y, param(ID(Y_WIDTH)));
+				check_expected(/*check_matched_sign=*/false);
+				return;
+			}
+
+			if (cell->type.in(ID($shift), ID($shiftx))) {
 				param_bool(ID(A_SIGNED));
 				param_bool(ID(B_SIGNED));
 				port(ID::A, param(ID(A_WIDTH)));
 				port(ID::B, param(ID(B_WIDTH)));
 				port(ID::Y, param(ID(Y_WIDTH)));
-				check_expected(false);
+				check_expected(/*check_matched_sign=*/false);
 				return;
 			}
 
@@ -957,7 +975,7 @@ namespace {
 				port(ID::A, param(ID(A_WIDTH)));
 				port(ID::B, param(ID(B_WIDTH)));
 				port(ID::Y, param(ID(Y_WIDTH)));
-				check_expected(false);
+				check_expected(/*check_matched_sign=*/false);
 				return;
 			}
 
@@ -1528,7 +1546,7 @@ std::vector<RTLIL::Wire*> RTLIL::Module::selected_wires() const
 std::vector<RTLIL::Cell*> RTLIL::Module::selected_cells() const
 {
 	std::vector<RTLIL::Cell*> result;
-	result.reserve(wires_.size());
+	result.reserve(cells_.size());
 	for (auto &it : cells_)
 		if (design->selected(this, it.second))
 			result.push_back(it.second);
@@ -3083,6 +3101,7 @@ void RTLIL::SigSpec::replace(const dict<RTLIL::SigBit, RTLIL::SigBit> &rules, RT
 	log_assert(other != NULL);
 	log_assert(width_ == other->width_);
 
+	if (rules.empty()) return;
 	unpack();
 	other->unpack();
 
@@ -3107,6 +3126,7 @@ void RTLIL::SigSpec::replace(const std::map<RTLIL::SigBit, RTLIL::SigBit> &rules
 	log_assert(other != NULL);
 	log_assert(width_ == other->width_);
 
+	if (rules.empty()) return;
 	unpack();
 	other->unpack();
 
@@ -3551,6 +3571,12 @@ bool RTLIL::SigSpec::operator ==(const RTLIL::SigSpec &other) const
 
 	if (width_ != other.width_)
 		return false;
+
+	// Without this, SigSpec() == SigSpec(State::S0, 0) will fail
+	//   since the RHS will contain one SigChunk of width 0 causing
+	//   the size check below to fail
+	if (width_ == 0)
+		return true;
 
 	pack();
 	other.pack();
