@@ -115,7 +115,7 @@ LDFLAGS += -rdynamic
 LDLIBS += -lrt
 endif
 
-YOSYS_VER := 0.9+932
+YOSYS_VER := 0.9+1706
 GIT_REV := $(shell cd $(YOSYS_SRC) && git rev-parse --short HEAD 2> /dev/null || echo UNKNOWN)
 OBJS = kernel/version_$(GIT_REV).o
 
@@ -128,7 +128,7 @@ bumpversion:
 # is just a symlink to your actual ABC working directory, as 'make mrproper'
 # will remove the 'abc' directory and you do not want to accidentally
 # delete your work on ABC..
-ABCREV = 623b5e8
+ABCREV = ed90ce2
 ABCPULL = 1
 ABCURL ?= https://github.com/berkeley-abc/abc
 ABCMKARGS = CC="$(CXX)" CXX="$(CXX)" ABC_USE_LIBSTDCXX=1
@@ -152,7 +152,15 @@ ifeq ($(ENABLE_PYOSYS),1)
 PYTHON_VERSION_TESTCODE := "import sys;t='{v[0]}.{v[1]}'.format(v=list(sys.version_info[:2]));print(t)"
 PYTHON_VERSION := $(shell $(PYTHON_EXECUTABLE) -c ""$(PYTHON_VERSION_TESTCODE)"")
 PYTHON_MAJOR_VERSION := $(shell echo $(PYTHON_VERSION) | cut -f1 -d.)
-PYTHON_PREFIX := $(shell $(PYTHON_EXECUTABLE)-config --prefix)
+
+ENABLE_PYTHON_CONFIG_EMBED ?= $(shell $(PYTHON_EXECUTABLE)-config --embed --libs > /dev/null && echo 1)
+ifeq ($(ENABLE_PYTHON_CONFIG_EMBED),1)
+PYTHON_CONFIG := $(PYTHON_EXECUTABLE)-config --embed
+else
+PYTHON_CONFIG := $(PYTHON_EXECUTABLE)-config
+endif
+
+PYTHON_PREFIX := $(shell $(PYTHON_CONFIG) --prefix)
 PYTHON_DESTDIR := $(PYTHON_PREFIX)/lib/python$(PYTHON_VERSION)/site-packages
 
 # Reload Makefile.conf to override python specific variables if defined
@@ -229,7 +237,8 @@ ABCMKARGS += ARCHFLAGS="-DABC_USE_STDINT_H -DABC_MEMALIGN=8"
 EMCCFLAGS := -Os -Wno-warn-absolute-paths
 EMCCFLAGS += --memory-init-file 0 --embed-file share -s NO_EXIT_RUNTIME=1
 EMCCFLAGS += -s EXPORTED_FUNCTIONS="['_main','_run','_prompt','_errmsg']"
-EMCCFLAGS += -s TOTAL_MEMORY=128*1024*1024
+EMCCFLAGS += -s TOTAL_MEMORY=134217728
+EMCCFLAGS += -s EXTRA_EXPORTED_RUNTIME_METHODS='["ccall", "cwrap"]'
 # https://github.com/kripken/emscripten/blob/master/src/settings.js
 CXXFLAGS += $(EMCCFLAGS)
 LDFLAGS += $(EMCCFLAGS)
@@ -248,10 +257,10 @@ viz.js:
 	wget -O viz.js.part https://github.com/mdaines/viz.js/releases/download/0.0.3/viz.js
 	mv viz.js.part viz.js
 
-yosysjs-$(YOSYS_VER).zip: yosys.js viz.js misc/yosysjs/*
+yosysjs-$(YOSYS_VER).zip: yosys.js yosys.wasm viz.js misc/yosysjs/*
 	rm -rf yosysjs-$(YOSYS_VER) yosysjs-$(YOSYS_VER).zip
 	mkdir -p yosysjs-$(YOSYS_VER)
-	cp viz.js misc/yosysjs/* yosys.js yosysjs-$(YOSYS_VER)/
+	cp viz.js misc/yosysjs/* yosys.js yosys.wasm yosysjs-$(YOSYS_VER)/
 	zip -r yosysjs-$(YOSYS_VER).zip yosysjs-$(YOSYS_VER)
 
 yosys.html: misc/yosys.html
@@ -305,17 +314,17 @@ ifeq ($(ENABLE_PYOSYS),1)
 #Detect name of boost_python library. Some distros usbe boost_python-py<version>, other boost_python<version>, some only use the major version number, some a concatenation of major and minor version numbers
 ifeq ($(OS), Darwin)
 BOOST_PYTHON_LIB ?= $(shell \
-	if echo "int main(int argc, char ** argv) {return 0;}" | $(CXX) -xc -o /dev/null $(shell $(PYTHON_EXECUTABLE)-config --ldflags) -lboost_python-py$(subst .,,$(PYTHON_VERSION)) - > /dev/null 2>&1;        then echo "-lboost_python-py$(subst .,,$(PYTHON_VERSION))";       else \
-	if echo "int main(int argc, char ** argv) {return 0;}" | $(CXX) -xc -o /dev/null $(shell $(PYTHON_EXECUTABLE)-config --ldflags) -lboost_python-py$(subst .,,$(PYTHON_MAJOR_VERSION)) - > /dev/null 2>&1;  then echo "-lboost_python-py$(subst .,,$(PYTHON_MAJOR_VERSION))"; else \
-	if echo "int main(int argc, char ** argv) {return 0;}" | $(CXX) -xc -o /dev/null $(shell $(PYTHON_EXECUTABLE)-config --ldflags) -lboost_python$(subst .,,$(PYTHON_VERSION)) - > /dev/null 2>&1;           then echo "-lboost_python$(subst .,,$(PYTHON_VERSION))";          else \
-	if echo "int main(int argc, char ** argv) {return 0;}" | $(CXX) -xc -o /dev/null $(shell $(PYTHON_EXECUTABLE)-config --ldflags) -lboost_python$(subst .,,$(PYTHON_MAJOR_VERSION)) - > /dev/null 2>&1;     then echo "-lboost_python$(subst .,,$(PYTHON_MAJOR_VERSION))";    else \
+	if echo "int main(int argc, char ** argv) {return 0;}" | $(CXX) -xc -o /dev/null $(shell $(PYTHON_CONFIG) --ldflags) -lboost_python-py$(subst .,,$(PYTHON_VERSION)) - > /dev/null 2>&1;        then echo "-lboost_python-py$(subst .,,$(PYTHON_VERSION))";       else \
+	if echo "int main(int argc, char ** argv) {return 0;}" | $(CXX) -xc -o /dev/null $(shell $(PYTHON_CONFIG) --ldflags) -lboost_python-py$(subst .,,$(PYTHON_MAJOR_VERSION)) - > /dev/null 2>&1;  then echo "-lboost_python-py$(subst .,,$(PYTHON_MAJOR_VERSION))"; else \
+	if echo "int main(int argc, char ** argv) {return 0;}" | $(CXX) -xc -o /dev/null $(shell $(PYTHON_CONFIG) --ldflags) -lboost_python$(subst .,,$(PYTHON_VERSION)) - > /dev/null 2>&1;           then echo "-lboost_python$(subst .,,$(PYTHON_VERSION))";          else \
+	if echo "int main(int argc, char ** argv) {return 0;}" | $(CXX) -xc -o /dev/null $(shell $(PYTHON_CONFIG) --ldflags) -lboost_python$(subst .,,$(PYTHON_MAJOR_VERSION)) - > /dev/null 2>&1;     then echo "-lboost_python$(subst .,,$(PYTHON_MAJOR_VERSION))";    else \
                                                                                                                                                                                         echo ""; fi; fi; fi; fi;)
 else
 BOOST_PYTHON_LIB ?= $(shell \
-	if echo "int main(int argc, char ** argv) {return 0;}" | $(CXX) -xc -o /dev/null `$(PYTHON_EXECUTABLE)-config --libs` -lboost_python-py$(subst .,,$(PYTHON_VERSION)) - > /dev/null 2>&1;        then echo "-lboost_python-py$(subst .,,$(PYTHON_VERSION))";       else \
-	if echo "int main(int argc, char ** argv) {return 0;}" | $(CXX) -xc -o /dev/null `$(PYTHON_EXECUTABLE)-config --libs` -lboost_python-py$(subst .,,$(PYTHON_MAJOR_VERSION)) - > /dev/null 2>&1;  then echo "-lboost_python-py$(subst .,,$(PYTHON_MAJOR_VERSION))"; else \
-	if echo "int main(int argc, char ** argv) {return 0;}" | $(CXX) -xc -o /dev/null `$(PYTHON_EXECUTABLE)-config --libs` -lboost_python$(subst .,,$(PYTHON_VERSION)) - > /dev/null 2>&1;           then echo "-lboost_python$(subst .,,$(PYTHON_VERSION))";          else \
-	if echo "int main(int argc, char ** argv) {return 0;}" | $(CXX) -xc -o /dev/null `$(PYTHON_EXECUTABLE)-config --libs` -lboost_python$(subst .,,$(PYTHON_MAJOR_VERSION)) - > /dev/null 2>&1;     then echo "-lboost_python$(subst .,,$(PYTHON_MAJOR_VERSION))";    else \
+	if echo "int main(int argc, char ** argv) {return 0;}" | $(CXX) -xc -o /dev/null `$(PYTHON_CONFIG) --libs` -lboost_python-py$(subst .,,$(PYTHON_VERSION)) - > /dev/null 2>&1;        then echo "-lboost_python-py$(subst .,,$(PYTHON_VERSION))";       else \
+	if echo "int main(int argc, char ** argv) {return 0;}" | $(CXX) -xc -o /dev/null `$(PYTHON_CONFIG) --libs` -lboost_python-py$(subst .,,$(PYTHON_MAJOR_VERSION)) - > /dev/null 2>&1;  then echo "-lboost_python-py$(subst .,,$(PYTHON_MAJOR_VERSION))"; else \
+	if echo "int main(int argc, char ** argv) {return 0;}" | $(CXX) -xc -o /dev/null `$(PYTHON_CONFIG) --libs` -lboost_python$(subst .,,$(PYTHON_VERSION)) - > /dev/null 2>&1;           then echo "-lboost_python$(subst .,,$(PYTHON_VERSION))";          else \
+	if echo "int main(int argc, char ** argv) {return 0;}" | $(CXX) -xc -o /dev/null `$(PYTHON_CONFIG) --libs` -lboost_python$(subst .,,$(PYTHON_MAJOR_VERSION)) - > /dev/null 2>&1;     then echo "-lboost_python$(subst .,,$(PYTHON_MAJOR_VERSION))";    else \
                                                                                                                                                                                         echo ""; fi; fi; fi; fi;)
 endif
 
@@ -325,19 +334,19 @@ endif
 
 ifeq ($(OS), Darwin)
 ifeq ($(PYTHON_MAJOR_VERSION),3)
-LDLIBS += $(shell $(PYTHON_EXECUTABLE)-config --ldflags) $(BOOST_PYTHON_LIB) -lboost_system -lboost_filesystem
-CXXFLAGS += $(shell $(PYTHON_EXECUTABLE)-config --includes) -DWITH_PYTHON
+LDLIBS += $(shell $(PYTHON_CONFIG) --ldflags) $(BOOST_PYTHON_LIB) -lboost_system -lboost_filesystem
+CXXFLAGS += $(shell $(PYTHON_CONFIG) --includes) -DWITH_PYTHON
 else
-LDLIBS += $(shell $(PYTHON_EXECUTABLE)-config --ldflags) $(BOOST_PYTHON_LIB) -lboost_system -lboost_filesystem
-CXXFLAGS += $(shell $(PYTHON_EXECUTABLE)-config --includes) -DWITH_PYTHON
+LDLIBS += $(shell $(PYTHON_CONFIG) --ldflags) $(BOOST_PYTHON_LIB) -lboost_system -lboost_filesystem
+CXXFLAGS += $(shell $(PYTHON_CONFIG) --includes) -DWITH_PYTHON
 endif
 else
 ifeq ($(PYTHON_MAJOR_VERSION),3)
-LDLIBS += $(shell $(PYTHON_EXECUTABLE)-config --libs) $(BOOST_PYTHON_LIB) -lboost_system -lboost_filesystem
-CXXFLAGS += $(shell $(PYTHON_EXECUTABLE)-config --includes) -DWITH_PYTHON
+LDLIBS += $(shell $(PYTHON_CONFIG) --libs) $(BOOST_PYTHON_LIB) -lboost_system -lboost_filesystem
+CXXFLAGS += $(shell $(PYTHON_CONFIG) --includes) -DWITH_PYTHON
 else
-LDLIBS += $(shell $(PYTHON_EXECUTABLE)-config --libs) $(BOOST_PYTHON_LIB) -lboost_system -lboost_filesystem
-CXXFLAGS += $(shell $(PYTHON_EXECUTABLE)-config --includes) -DWITH_PYTHON
+LDLIBS += $(shell $(PYTHON_CONFIG) --libs) $(BOOST_PYTHON_LIB) -lboost_system -lboost_filesystem
+CXXFLAGS += $(shell $(PYTHON_CONFIG) --includes) -DWITH_PYTHON
 endif
 endif
 
@@ -660,7 +669,8 @@ ifneq ($(ABCREV),default)
 	$(Q) if ( cd abc 2> /dev/null && ! git diff-index --quiet HEAD; ); then \
 		echo 'REEBE: NOP pbagnvaf ybpny zbqvsvpngvbaf! Frg NOPERI=qrsnhyg va Lbflf Znxrsvyr!' | tr 'A-Za-z' 'N-ZA-Mn-za-m'; false; \
 	fi
-	$(Q) if test "`cd abc 2> /dev/null && git rev-parse --short HEAD`" != "$(ABCREV)"; then \
+# set a variable so the test fails if git fails to run - when comparing outputs directly, empty string would match empty string
+	$(Q) if ! (cd abc && rev="`git rev-parse $(ABCREV)`" && test "`git rev-parse HEAD`" == "$$rev"); then \
 		test $(ABCPULL) -ne 0 || { echo 'REEBE: NOP abg hc gb qngr naq NOPCHYY frg gb 0 va Znxrsvyr!' | tr 'A-Za-z' 'N-ZA-Mn-za-m'; exit 1; }; \
 		echo "Pulling ABC from $(ABCURL):"; set -x; \
 		test -d abc || git clone $(ABCURL) abc; \
@@ -706,6 +716,7 @@ test: $(TARGETS) $(EXTRA_TARGETS)
 	+cd tests/memories && bash run-test.sh $(ABCOPT) $(SEEDOPT)
 	+cd tests/bram && bash run-test.sh $(SEEDOPT)
 	+cd tests/various && bash run-test.sh
+	+cd tests/select && bash run-test.sh
 	+cd tests/sat && bash run-test.sh
 	+cd tests/svinterfaces && bash run-test.sh $(SEEDOPT)
 	+cd tests/svtypes && bash run-test.sh $(SEEDOPT)
@@ -720,6 +731,7 @@ test: $(TARGETS) $(EXTRA_TARGETS)
 	+cd tests/arch/anlogic && bash run-test.sh $(SEEDOPT)
 	+cd tests/arch/gowin && bash run-test.sh $(SEEDOPT)
 	+cd tests/rpc && bash run-test.sh
+	+cd tests/memfile && bash run-test.sh
 	@echo ""
 	@echo "  Passed \"make test\"."
 	@echo ""
@@ -756,7 +768,7 @@ clean-unit-test:
 
 install: $(TARGETS) $(EXTRA_TARGETS)
 	$(INSTALL_SUDO) mkdir -p $(DESTDIR)$(BINDIR)
-	$(INSTALL_SUDO) cp $(TARGETS) $(DESTDIR)$(BINDIR)
+	$(INSTALL_SUDO) cp $(filter-out libyosys.so,$(TARGETS)) $(DESTDIR)$(BINDIR)
 ifneq ($(filter yosys,$(TARGETS)),)
 	$(INSTALL_SUDO) $(STRIP) -S $(DESTDIR)$(BINDIR)/yosys
 endif
@@ -886,6 +898,7 @@ config-emcc: clean
 	echo 'ENABLE_ABC := 0' >> Makefile.conf
 	echo 'ENABLE_PLUGINS := 0' >> Makefile.conf
 	echo 'ENABLE_READLINE := 0' >> Makefile.conf
+	echo 'ENABLE_ZLIB := 0' >> Makefile.conf
 
 config-mxe: clean
 	echo 'CONFIG := mxe' > Makefile.conf
@@ -919,6 +932,9 @@ echo-yosys-ver:
 
 echo-git-rev:
 	@echo "$(GIT_REV)"
+
+echo-abc-rev:
+	@echo "$(ABCREV)"
 
 -include libs/*/*.d
 -include frontends/*/*.d
