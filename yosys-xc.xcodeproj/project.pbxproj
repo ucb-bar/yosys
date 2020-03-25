@@ -1327,6 +1327,12 @@
 		0732C6C02282409B00629111 /* abcRunGen.c in Sources */ = {isa = PBXBuildFile; fileRef = 0732C6BF2282409B00629111 /* abcRunGen.c */; };
 		0732C6C2228240C100629111 /* extraUtilCfs.c in Sources */ = {isa = PBXBuildFile; fileRef = 0732C6C1228240C100629111 /* extraUtilCfs.c */; };
 		0732C6C4228240ED00629111 /* extraUtilGen.c in Sources */ = {isa = PBXBuildFile; fileRef = 0732C6C3228240ED00629111 /* extraUtilGen.c */; };
+		073B2BE3242ACA60006AEEB5 /* giaGen.c in Sources */ = {isa = PBXBuildFile; fileRef = 073B2BDE242ACA5F006AEEB5 /* giaGen.c */; };
+		073B2BE4242ACA60006AEEB5 /* giaSim4.c in Sources */ = {isa = PBXBuildFile; fileRef = 073B2BDF242ACA5F006AEEB5 /* giaSim4.c */; };
+		073B2BE5242ACA60006AEEB5 /* giaSim5.c in Sources */ = {isa = PBXBuildFile; fileRef = 073B2BE0242ACA5F006AEEB5 /* giaSim5.c */; };
+		073B2BE6242ACA60006AEEB5 /* giaSimBase.c in Sources */ = {isa = PBXBuildFile; fileRef = 073B2BE1242ACA5F006AEEB5 /* giaSimBase.c */; };
+		073B2BE7242ACA60006AEEB5 /* giaDeep.c in Sources */ = {isa = PBXBuildFile; fileRef = 073B2BE2242ACA5F006AEEB5 /* giaDeep.c */; };
+		073B2BE9242AD1C9006AEEB5 /* acbTest.c in Sources */ = {isa = PBXBuildFile; fileRef = 073B2BE8242AD1C9006AEEB5 /* acbTest.c */; };
 		075BD0EA20F817BB008C3557 /* version_8b92ddb9.cc in Sources */ = {isa = PBXBuildFile; fileRef = 075BD0E920F817BB008C3557 /* version_8b92ddb9.cc */; };
 		077273CE215074E200DD4A0E /* extraUtilPath.c in Sources */ = {isa = PBXBuildFile; fileRef = 077273CD215074E100DD4A0E /* extraUtilPath.c */; };
 		077273D02150754500DD4A0E /* dauCount.c in Sources */ = {isa = PBXBuildFile; fileRef = 077273CF2150754500DD4A0E /* dauCount.c */; };
@@ -1364,6 +1370,8 @@
 			isa = PBXBuildRule;
 			compilerSpec = com.apple.compilers.proxy.script;
 			fileType = sourcecode.yacc;
+			inputFiles = (
+			);
 			isEditable = 1;
 			outputFiles = (
 				"$(DERIVED_FILE_DIR)/$(INPUT_FILE_BASE).tab.cc",
@@ -1375,6 +1383,8 @@
 			isa = PBXBuildRule;
 			compilerSpec = com.apple.compilers.proxy.script;
 			fileType = sourcecode.lex;
+			inputFiles = (
+			);
 			isEditable = 1;
 			outputFiles = (
 				"$(DERIVED_FILE_DIR)/$(INPUT_FILE_BASE).cc",
@@ -3659,6 +3669,12 @@
 		0732C6BF2282409B00629111 /* abcRunGen.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = abcRunGen.c; path = ../../../../../abc/src/base/abci/abcRunGen.c; sourceTree = "<group>"; };
 		0732C6C1228240C100629111 /* extraUtilCfs.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = extraUtilCfs.c; path = ../../../../../abc/src/misc/extra/extraUtilCfs.c; sourceTree = "<group>"; };
 		0732C6C3228240ED00629111 /* extraUtilGen.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = extraUtilGen.c; path = ../../../../../abc/src/misc/extra/extraUtilGen.c; sourceTree = "<group>"; };
+		073B2BDE242ACA5F006AEEB5 /* giaGen.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = giaGen.c; path = ../../../../../abc/src/aig/gia/giaGen.c; sourceTree = "<group>"; };
+		073B2BDF242ACA5F006AEEB5 /* giaSim4.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = giaSim4.c; path = ../../../../../abc/src/aig/gia/giaSim4.c; sourceTree = "<group>"; };
+		073B2BE0242ACA5F006AEEB5 /* giaSim5.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = giaSim5.c; path = ../../../../../abc/src/aig/gia/giaSim5.c; sourceTree = "<group>"; };
+		073B2BE1242ACA5F006AEEB5 /* giaSimBase.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = giaSimBase.c; path = ../../../../../abc/src/aig/gia/giaSimBase.c; sourceTree = "<group>"; };
+		073B2BE2242ACA5F006AEEB5 /* giaDeep.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = giaDeep.c; path = ../../../../../abc/src/aig/gia/giaDeep.c; sourceTree = "<group>"; };
+		073B2BE8242AD1C9006AEEB5 /* acbTest.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = acbTest.c; path = ../../../../../abc/src/base/acb/acbTest.c; sourceTree = "<group>"; };
 		075BD0E920F817BB008C3557 /* version_8b92ddb9.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = version_8b92ddb9.cc; path = "../../../../../../../../../../Users/jrl/Library/Developer/Xcode/DerivedData/yosys-xc-cgopwczfcfflqbdhmmuvpudjuvyk/Build/Products/Debug/kernel/version_8b92ddb9.cc"; sourceTree = "<group>"; };
 		076E590E221C957400D15113 /* hierarchy.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = hierarchy.sh; sourceTree = "<group>"; };
 		077273CD215074E100DD4A0E /* extraUtilPath.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = extraUtilPath.c; sourceTree = "<group>"; };
@@ -4602,6 +4618,11 @@
 		072634BF20F68264006A5587 /* gia */ = {
 			isa = PBXGroup;
 			children = (
+				073B2BE2242ACA5F006AEEB5 /* giaDeep.c */,
+				073B2BDE242ACA5F006AEEB5 /* giaGen.c */,
+				073B2BDF242ACA5F006AEEB5 /* giaSim4.c */,
+				073B2BE0242ACA5F006AEEB5 /* giaSim5.c */,
+				073B2BE1242ACA5F006AEEB5 /* giaSimBase.c */,
 				072634C020F68264006A5587 /* gia.c */,
 				072634C120F68264006A5587 /* gia.h */,
 				072634C220F68264006A5587 /* giaAgi.c */,
@@ -4984,6 +5005,7 @@
 		072637EC20F68265006A5587 /* acb */ = {
 			isa = PBXGroup;
 			children = (
+				073B2BE8242AD1C9006AEEB5 /* acbTest.c */,
 				072637ED20F68265006A5587 /* acb.c */,
 				072637EE20F68265006A5587 /* acb.h */,
 				072637EF20F68265006A5587 /* acbAbc.c */,
@@ -7911,6 +7933,7 @@
 				072650BE20F68273006A5587 /* fretInit.c in Sources */,
 				072654C120F6827A006A5587 /* cnf_reader.c in Sources */,
 				07264D4D20F6826F006A5587 /* llb1Man.c in Sources */,
+				073B2BE7242ACA60006AEEB5 /* giaDeep.c in Sources */,
 				07264A1A20F6826D006A5587 /* abcDetect.c in Sources */,
 				0726554D20F6827B006A5587 /* extract_fa.cc in Sources */,
 				0726533B20F68277006A5587 /* intInter.c in Sources */,
@@ -7982,6 +8005,7 @@
 				07BD9D7A20F71CCB00E2E3B1 /* satMem.c in Sources */,
 				072653AE20F68278006A5587 /* sswIslands.c in Sources */,
 				0726489F20F6826C006A5587 /* giaScl.c in Sources */,
+				073B2BE3242ACA60006AEEB5 /* giaGen.c in Sources */,
 				07264DED20F68270006A5587 /* luckyRead.c in Sources */,
 				07264A2920F6826D006A5587 /* abcEco.c in Sources */,
 				072649BE20F6826D006A5587 /* abcFunc.c in Sources */,
@@ -8080,6 +8104,7 @@
 				072651F420F68275006A5587 /* simSupp.c in Sources */,
 				0726554520F6827A006A5587 /* attrmvcp.cc in Sources */,
 				07264D3A20F6826F006A5587 /* extraBddUnate.c in Sources */,
+				073B2BE6242ACA60006AEEB5 /* giaSimBase.c in Sources */,
 				0726503820F68273006A5587 /* inftrees.c in Sources */,
 				0726510320F68274006A5587 /* lpkAbcMux.c in Sources */,
 				072653F220F68278006A5587 /* bmcCexDepth.c in Sources */,
@@ -8240,6 +8265,7 @@
 				07264B6320F6826E006A5587 /* exorLink.c in Sources */,
 				07264C9420F6826F006A5587 /* cuddDecomp.c in Sources */,
 				072653C420F68278006A5587 /* sswSemi.c in Sources */,
+				073B2BE9242AD1C9006AEEB5 /* acbTest.c in Sources */,
 				072654AB20F68279006A5587 /* msatRead.c in Sources */,
 				07264FB720F68272006A5587 /* mvcCover.c in Sources */,
 				0726522820F68275006A5587 /* absOldSat.c in Sources */,
@@ -8531,6 +8557,7 @@
 				0726527F20F68276006A5587 /* acecXor.c in Sources */,
 				0726523120F68275006A5587 /* absPth.c in Sources */,
 				0726481C20F6826C006A5587 /* giaEra2.c in Sources */,
+				073B2BE4242ACA60006AEEB5 /* giaSim4.c in Sources */,
 				0726536C20F68277006A5587 /* pdrCore.c in Sources */,
 				0726552120F6827A006A5587 /* memory_unpack.cc in Sources */,
 				07264CEB20F6826F006A5587 /* cuddZddCount.c in Sources */,
@@ -8873,6 +8900,7 @@
 				0726507420F68273006A5587 /* cutPre22.c in Sources */,
 				07264BE720F6826E006A5587 /* plaMan.c in Sources */,
 				07264B5D20F6826E006A5587 /* exorBits.c in Sources */,
+				073B2BE5242ACA60006AEEB5 /* giaSim5.c in Sources */,
 				07264FDE20F68272006A5587 /* nmTable.c in Sources */,
 				07264CF420F6826F006A5587 /* cuddZddIsop.c in Sources */,
 				0726558D20F6827B006A5587 /* ezminisat.cc in Sources */,
@@ -9149,6 +9177,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
@@ -9207,6 +9236,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
@@ -9250,6 +9280,7 @@
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 10.13;
 				MTL_ENABLE_DEBUG_INFO = NO;
+				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = macosx;
 			};
 			name = Release;

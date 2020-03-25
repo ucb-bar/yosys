@@ -45,6 +45,12 @@ namespace VERILOG_FRONTEND
 	// this function converts a Verilog constant to an AST_CONSTANT node
 	AST::AstNode *const2ast(std::string code, char case_type = 0, bool warn_z = false);
 
+	// names of locally typedef'ed types
+	extern std::map<std::string, AST::AstNode*> user_types;
+
+	// names of package typedef'ed types
+	extern std::map<std::string, AST::AstNode*> pkg_user_types;
+
 	// state of `default_nettype
 	extern bool default_nettype_wire;
 
@@ -87,7 +93,6 @@ YOSYS_NAMESPACE_END
 
 // the usual bison/flex stuff
 extern int frontend_verilog_yydebug;
-int frontend_verilog_yylex(void);
 void frontend_verilog_yyerror(char const *fmt, ...);
 void frontend_verilog_yyrestart(FILE *f);
 int frontend_verilog_yyparse(void);

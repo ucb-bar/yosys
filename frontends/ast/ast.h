@@ -68,6 +68,8 @@ namespace AST
 		AST_LIVE,
 		AST_FAIR,
 		AST_COVER,
+		AST_ENUM,
+		AST_ENUM_ITEM,
 
 		AST_FCALL,
 		AST_TO_BITS,
@@ -154,6 +156,13 @@ namespace AST
 		AST_TYPEDEF
 	};
 
+	struct AstSrcLocType {
+		unsigned int first_line, last_line;
+		unsigned int first_column, last_column;
+		AstSrcLocType() : first_line(0), last_line(0), first_column(0), last_column(0) {}
+		AstSrcLocType(int _first_line, int _first_column, int _last_line, int _last_column) : first_line(_first_line), last_line(_last_line), first_column(_first_column), last_column(_last_column) {}
+	};
+
 	// convert an node type to a string (e.g. for debug output)
 	std::string type2str(AstNodeType type);
 
@@ -181,6 +190,8 @@ namespace AST
 		int port_id, range_left, range_right;
 		uint32_t integer;
 		double realvalue;
+		// set for IDs typed to an enumeration, not used
+		bool is_enum;
 
 		// if this is a multirange memory then this vector contains offset and length of each dimension
 		std::vector<int> multirange_dimensions;
@@ -195,7 +206,7 @@ namespace AST
 		// it is automatically set by the constructor using AST::current_filename and
 		// the AST::get_line_num() callback function.
 		std::string filename;
-		int linenum;
+		AstSrcLocType location;
 
 		// creating and deleting nodes
 		AstNode(AstNodeType type = AST_NONE, AstNode *child1 = NULL, AstNode *child2 = NULL, AstNode *child3 = NULL);
@@ -244,6 +255,7 @@ namespace AST
 		void replace_variables(std::map<std::string, varinfo_t> &variables, AstNode *fcall);
 		AstNode *eval_const_function(AstNode *fcall);
 		bool is_simple_const_expr();
+		std::string process_format_str(const std::string &sformat, int next_arg, int stage, int width_hint, bool sign_hint);
 
 		// create a human-readable text representation of the AST (for debugging)
 		void dumpAst(FILE *f, std::string indent) const;
@@ -285,6 +297,9 @@ namespace AST
 		int isConst() const; // return '1' for AST_CONSTANT and '2' for AST_REALVALUE
 		double asReal(bool is_signed);
 		RTLIL::Const realAsConst(int width);
+
+		// helpers for enum
+		void allocateDefaultEnumValues();
 	};
 
 	// process an AST tree (ast must point to an AST_DESIGN node) and generate RTLIL code
@@ -299,7 +314,7 @@ namespace AST
 		~AstModule() YS_OVERRIDE;
 		RTLIL::IdString derive(RTLIL::Design *design, dict<RTLIL::IdString, RTLIL::Const> parameters, bool mayfail) YS_OVERRIDE;
 		RTLIL::IdString derive(RTLIL::Design *design, dict<RTLIL::IdString, RTLIL::Const> parameters, dict<RTLIL::IdString, RTLIL::Module*> interfaces, dict<RTLIL::IdString, RTLIL::IdString> modports, bool mayfail) YS_OVERRIDE;
-		std::string derive_common(RTLIL::Design *design, dict<RTLIL::IdString, RTLIL::Const> parameters, AstNode **new_ast_out);
+		std::string derive_common(RTLIL::Design *design, dict<RTLIL::IdString, RTLIL::Const> parameters, AstNode **new_ast_out, bool quiet = false);
 		void reprocess_module(RTLIL::Design *design, dict<RTLIL::IdString, RTLIL::Module *> local_interfaces) YS_OVERRIDE;
 		RTLIL::Module *clone() const YS_OVERRIDE;
 		void loadconfig() const;

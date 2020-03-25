@@ -23,7 +23,25 @@
 #define LOG_H
 
 #include <time.h>
-#include <regex>
+
+// In GCC 4.8 std::regex is not working correctlty, in order to make features
+// using regular expressions to work replacement regex library is used
+#if defined(__GNUC__) && !defined( __clang__) && ( __GNUC__ == 4 && __GNUC_MINOR__ <= 8)
+	#include <boost/xpressive/xpressive.hpp>
+	#define YS_REGEX_TYPE boost::xpressive::sregex
+	#define YS_REGEX_NS boost::xpressive
+	#define YS_REGEX_COMPILE(param) boost::xpressive::sregex::compile(param, \
+					boost::xpressive::regex_constants::nosubs | \
+					boost::xpressive::regex_constants::optimize)
+# else
+	#include <regex>
+	#define YS_REGEX_TYPE std::regex
+	#define YS_REGEX_NS std
+	#define YS_REGEX_COMPILE(param) std::regex(param, \
+					std::regex_constants::nosubs | \
+					std::regex_constants::optimize | \
+					std::regex_constants::egrep)
+#endif
 
 #ifndef _WIN32
 #  include <sys/time.h>
@@ -49,9 +67,11 @@ struct log_cmd_error_exception { };
 extern std::vector<FILE*> log_files;
 extern std::vector<std::ostream*> log_streams;
 extern std::map<std::string, std::set<std::string>> log_hdump;
-extern std::vector<std::regex> log_warn_regexes, log_nowarn_regexes, log_werror_regexes;
-extern std::set<std::string> log_warnings;
+extern std::vector<YS_REGEX_TYPE> log_warn_regexes, log_nowarn_regexes, log_werror_regexes;
+extern std::set<std::string> log_warnings, log_experimentals, log_experimentals_ignored;
 extern int log_warnings_count;
+extern int log_warnings_count_noexpect;
+extern bool log_expect_no_warnings;
 extern bool log_hdump_all;
 extern FILE *log_errfile;
 extern SHA1 *log_hasher;
@@ -77,6 +97,7 @@ YS_NORETURN void logv_error(const char *format, va_list ap) YS_ATTRIBUTE(noretur
 void log(const char *format, ...)  YS_ATTRIBUTE(format(printf, 1, 2));
 void log_header(RTLIL::Design *design, const char *format, ...) YS_ATTRIBUTE(format(printf, 2, 3));
 void log_warning(const char *format, ...) YS_ATTRIBUTE(format(printf, 1, 2));
+void log_experimental(const char *format, ...) YS_ATTRIBUTE(format(printf, 1, 2));
 
 // Log with filename to report a problem in a source file.
 void log_file_warning(const std::string &filename, int lineno, const char *format, ...) YS_ATTRIBUTE(format(printf, 3, 4));
@@ -133,6 +154,23 @@ void log_pop();
 void log_backtrace(const char *prefix, int levels);
 void log_reset_stack();
 void log_flush();
+
+struct LogExpectedItem
+{
+	LogExpectedItem(std::string pattern, int expected) :
+		expected_count(expected),
+		current_count(0),
+		pattern(pattern)
+	{
+	}
+
+	int expected_count;
+	int current_count;
+	std::string pattern;
+};
+
+extern std::vector<std::pair<YS_REGEX_TYPE,LogExpectedItem>> log_expect_log, log_expect_warning, log_expect_error;
+void log_check_expected();
 
 const char *log_signal(const RTLIL::SigSpec &sig, bool autoint = true);
 const char *log_const(const RTLIL::Const &value, bool autoint = true);

@@ -101,6 +101,8 @@ class SmtModInfo:
         self.cells = dict()
         self.asserts = dict()
         self.covers = dict()
+        self.maximize = set()
+        self.minimize = set()
         self.anyconsts = dict()
         self.anyseqs = dict()
         self.allconsts = dict()
@@ -304,7 +306,11 @@ class SmtIo:
 
     def p_open(self):
         assert self.p is None
-        self.p = subprocess.Popen(self.popen_vargs, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        try:
+            self.p = subprocess.Popen(self.popen_vargs, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        except FileNotFoundError:
+            print("%s SMT Solver '%s' not found in path." % (self.timestamp(), self.popen_vargs[0]), flush=True)
+            sys.exit(1)
         running_solvers[self.p_index] = self.p
         self.p_running = True
         self.p_next = None
@@ -497,6 +503,12 @@ class SmtIo:
 
         if fields[1] == "yosys-smt2-cover":
             self.modinfo[self.curmod].covers["%s_c %s" % (self.curmod, fields[2])] = fields[3]
+
+        if fields[1] == "yosys-smt2-maximize":
+            self.modinfo[self.curmod].maximize.add(fields[2])
+
+        if fields[1] == "yosys-smt2-minimize":
+            self.modinfo[self.curmod].minimize.add(fields[2])
 
         if fields[1] == "yosys-smt2-anyconst":
             self.modinfo[self.curmod].anyconsts[fields[2]] = (fields[4], None if len(fields) <= 5 else fields[5])
