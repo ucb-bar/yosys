@@ -36,6 +36,11 @@ struct Pass
 
 	int call_counter;
 	int64_t runtime_ns;
+	bool experimental_flag = false;
+
+	void experimental() {
+		experimental_flag = true;
+	}
 
 	struct pre_post_exec_state_t {
 		Pass *parent_pass;
@@ -62,6 +67,9 @@ struct Pass
 	virtual void run_register();
 	static void init_register();
 	static void done_register();
+
+	virtual void on_register();
+	virtual void on_shutdown();
 };
 
 struct ScriptPass : Pass
@@ -76,6 +84,7 @@ struct ScriptPass : Pass
 
 	bool check_label(std::string label, std::string info = std::string());
 	void run(std::string command, std::string info = std::string());
+	void run_nocheck(std::string command, std::string info = std::string());
 	void run_script(RTLIL::Design *design, std::string run_from = std::string(), std::string run_to = std::string());
 	void help_script();
 };
